@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Ring Rumble</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#171018">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ring Rumble">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+
+<style>
+  :root{
+    --blue:#2e6bff; --blue-dark:#123a9c;
+    --red:#ff3b3b; --red-dark:#9c1212;
+    --gold:#ffcf4d;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; height:100%; overflow:hidden;
+    background: radial-gradient(circle at 50% 20%, #2a1f2c 0%, #14101a 60%, #0a0810 100%);
+    font-family:'Trebuchet MS','Segoe UI',sans-serif;
+    color:#f4ecff; touch-action:none; user-select:none; -webkit-user-select:none;
+  }
+  button{ font-family:inherit; }
+
+  /* ---------- Select Screen ---------- */
+  #selectScreen{
+    height:100%; display:flex; align-items:center; justify-content:center; padding:16px;
+  }
+  .selectCard{
+    width:min(94vw,440px);
+    background:rgba(30,20,34,.9);
+    border:1px solid #4a3a50;
+    border-radius:18px;
+    padding:18px 18px 22px;
+    box-shadow:0 10px 40px rgba(0,0,0,.5);
+  }
+  .selectCard h1{
+    text-align:center; margin:0 0 14px; letter-spacing:3px; font-size:clamp(20px,6vw,28px);
+    text-transform:uppercase;
+    background:linear-gradient(90deg,var(--blue) 0%,var(--gold) 50%,var(--red) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .modeToggle{ display:flex; gap:8px; margin-bottom:16px; }
+  .modeBtn{
+    flex:1; padding:10px 6px; border-radius:10px; border:1px solid #4a3a50;
+    background:#2a1f2c; color:#cfc4d8; font-weight:bold; font-size:13px; cursor:pointer;
+  }
+  .modeBtn.active{ background:linear-gradient(90deg,var(--blue),var(--red)); color:#fff; border-color:transparent; }
+
+  .pickRow{ margin-bottom:14px; }
+  .pickLabel{ font-size:12px; font-weight:bold; letter-spacing:1.5px; margin-bottom:6px; }
+  .blueText{ color:var(--blue); }
+  .redText{ color:var(--red); }
+  .emojiRow{ display:flex; flex-wrap:wrap; gap:6px; }
+  .emojiBtn{
+    width:44px; height:44px; border-radius:10px; border:2px solid #4a3a50;
+    background:#211823; font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .emojiBtn.sel-blue{ border-color:var(--blue); box-shadow:0 0 10px rgba(46,107,255,.7); }
+  .emojiBtn.sel-red{ border-color:var(--red); box-shadow:0 0 10px rgba(255,59,59,.7); }
+
+  #fightBtn{
+    width:100%; margin-top:6px; padding:14px; border:none; border-radius:30px;
+    background:linear-gradient(90deg,var(--blue),var(--red)); color:#fff; font-weight:900;
+    font-size:17px; letter-spacing:2px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.4);
+  }
+  .hint{ text-align:center; font-size:11px; opacity:.6; margin-top:10px; line-height:1.4; }
+
+  /* ---------- Game Screen ---------- */
+  #gameScreen{ height:100%; display:none; flex-direction:column; }
+
+  .padWrap{ display:flex; justify-content:center; padding:6px; flex-shrink:0; }
+  .padWrap.top .pad{ transform:rotate(180deg); }
+
+  .pad{
+    display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr);
+    gap:6px; width:min(94vw,480px);
+  }
+  .pad button{
+    border:none; border-radius:12px; font-weight:900; color:#fff;
+    height:clamp(38px,9vw,52px); display:flex; align-items:center; justify-content:center;
+    touch-action:none; opacity:.9; font-size:clamp(14px,4vw,20px);
+  }
+  .pad button:active{ opacity:1; transform:scale(.94); }
+  .blue-pad button{ background:linear-gradient(180deg,#3a7bff,var(--blue-dark)); box-shadow:0 3px 0 #0a2570; }
+  .red-pad button{ background:linear-gradient(180deg,#ff5c5c,var(--red-dark)); box-shadow:0 3px 0 #6e0d0d; }
+  .pad .btnPunch{ font-size:clamp(11px,3vw,14px); letter-spacing:.5px; }
+  .pad .btnKick{ font-size:clamp(11px,3vw,14px); letter-spacing:.5px; }
+  .pad .btnBlock{ font-size:clamp(11px,3vw,14px); letter-spacing:.5px; }
+
+  #midWrap{ flex:1; min-height:0; display:flex; flex-direction:column; padding:0 8px; }
+
+  h1.title{
+    text-align:center; margin:2px 0 4px; letter-spacing:3px; font-size:clamp(14px,3.6vw,20px);
+    text-transform:uppercase;
+    background:linear-gradient(90deg,var(--blue) 0%,var(--gold) 50%,var(--red) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; flex-shrink:0;
+  }
+
+  #hud{ display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-shrink:0; }
+  .side{ flex:1; }
+  .side.right{ text-align:right; }
+  .side .name{ font-size:clamp(9px,2.4vw,12px); font-weight:bold; letter-spacing:1.5px; margin-bottom:3px; }
+  .blue .name{ color:var(--blue); } .red .name{ color:var(--red); }
+  .cpuTag{ display:none; font-size:9px; background:#fff2; padding:1px 5px; border-radius:6px; margin-left:4px; }
+  .dots{ letter-spacing:2px; font-size:12px; color:var(--gold); }
+  .healthWrap{ height:12px; border-radius:8px; background:#241820; border:1px solid #4a3a44; overflow:hidden; }
+  .healthFill{ height:100%; width:100%; transition:width .25s ease; }
+  .blueFill{ background:linear-gradient(90deg,#123a9c,var(--blue)); margin-left:auto; }
+  .redFill{ background:linear-gradient(90deg,var(--red),#9c1212); }
+  #timer{ font-size:clamp(16px,4.4vw,24px); font-weight:900; color:var(--gold); min-width:44px; text-align:center; font-variant-numeric:tabular-nums; text-shadow:0 0 10px rgba(255,207,77,.6); }
+
+  #arenaOuter{ position:relative; flex:1; min-height:0; }
+  #arena{
+    position:relative; width:100%; height:100%; border-radius:14px; overflow:hidden;
+    border:3px solid #3a2a3f;
+    background:
+      radial-gradient(ellipse at 50% 100%, rgba(255,207,77,.08), transparent 60%),
+      repeating-linear-gradient(0deg,#241a26 0 2px,#201822 2px 4px),
+      linear-gradient(#241a2a,#1a1420);
+    box-shadow:inset 0 0 40px rgba(0,0,0,.6);
+  }
+  #arena.shake{ animation:shake .3s; }
+  @keyframes shake{
+    0%,100%{ transform:translate(0,0); }
+    20%{ transform:translate(-6px,2px); }
+    40%{ transform:translate(6px,-2px); }
+    60%{ transform:translate(-4px,3px); }
+    80%{ transform:translate(4px,-1px); }
+  }
+  #arena::before,#arena::after{ content:""; position:absolute; top:0; bottom:12%; width:6px; background:repeating-linear-gradient(#5a4a60 0 10px,transparent 10px 20px); }
+  #arena::before{ left:8px; } #arena::after{ right:8px; }
+  .floor{ position:absolute; left:0; right:0; bottom:0; height:12%; background:linear-gradient(#3a2a30,#241820); border-top:2px solid #4a3a44; }
+
+  .fighter{ position:absolute; bottom:12%; width:12%; min-width:46px; text-align:center; transition:left .04s linear, transform .12s ease; }
+  .platform{ width:60%; height:9px; margin:0 auto; border-radius:50%; filter:blur(1px); }
+  .blue .platform{ background:radial-gradient(ellipse,rgba(46,107,255,.55),transparent 70%); }
+  .red .platform{ background:radial-gradient(ellipse,rgba(255,59,59,.55),transparent 70%); }
+
+  .emoji{ font-size:clamp(28px,7.4vw,52px); display:block; line-height:1; transform-origin:bottom center; filter:drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+  .fighter.blue .emoji{ filter:drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 8px rgba(46,107,255,.7)); }
+  .fighter.red .emoji{ filter:drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 8px rgba(255,59,59,.7)); transform:scaleX(-1); }
+
+  .fighter.jump{ transform:translateY(-15vh); }
+  .fighter.red.jump{ transform:translateY(-15vh) scaleX(1); }
+  .fighter.attack-punch .emoji{ transform:scale(1.2) translateX(6px); }
+  .fighter.attack-kick .emoji{ transform:scale(1.4) translateX(10px) rotate(-8deg); }
+  .fighter.red.attack-punch .emoji{ transform:scale(1.2) translateX(-6px) scaleX(-1); }
+  .fighter.red.attack-kick .emoji{ transform:scale(1.4) translateX(-10px) rotate(8deg) scaleX(-1); }
+  .fighter.hitflash .emoji{ filter:drop-shadow(0 0 14px #fff) brightness(2); }
+  .fighter.blocking .emoji{ filter:drop-shadow(0 0 10px #fff) brightness(1.2); }
+  .shieldBadge{ position:absolute; top:-14px; left:50%; transform:translateX(-50%); font-size:16px; opacity:0; transition:opacity .1s; }
+  .fighter.blocking .shieldBadge{ opacity:1; }
+
+  .impact{ position:absolute; top:-6px; left:50%; transform:translateX(-50%); font-size:clamp(18px,4.6vw,28px); opacity:0; pointer-events:none; }
+  .impact.show{ animation:pop .5s ease-out forwards; }
+  @keyframes pop{
+    0%{ opacity:1; transform:translate(-50%,0) scale(.6); }
+    60%{ opacity:1; transform:translate(-50%,-28px) scale(1.3); }
+    100%{ opacity:0; transform:translate(-50%,-46px) scale(1); }
+  }
+  .comboPopup{ position:absolute; top:-34px; left:50%; transform:translateX(-50%); font-size:12px; font-weight:900; color:var(--gold); opacity:0; white-space:nowrap; pointer-events:none; }
+  .comboPopup.show{ animation:comboPop .7s ease-out forwards; }
+  @keyframes comboPop{
+    0%{ opacity:1; transform:translate(-50%,0) scale(.8); }
+    50%{ opacity:1; transform:translate(-50%,-10px) scale(1.15); }
+    100%{ opacity:0; transform:translate(-50%,-24px) scale(1); }
+  }
+
+  #powerup{ position:absolute; top:36%; font-size:30px; display:none; animation:float 1.4s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(255,207,77,.8)); }
+  @keyframes float{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-8px);} }
+
+  #banner{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:clamp(24px,7vw,44px); font-weight:900; letter-spacing:2px; text-align:center; padding:10px;
+    color:#fff; text-shadow:0 0 20px rgba(0,0,0,.8), 0 0 10px var(--gold);
+    opacity:0; pointer-events:none; transition:opacity .2s; z-index:15;
+  }
+  #banner.show{ opacity:1; }
+
+  #overlay{
+    position:absolute; inset:0; background:rgba(10,8,14,.92); display:none; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; gap:12px; z-index:20; padding:16px;
+  }
+  #overlay h2{ font-size:clamp(20px,6vw,32px); margin:0; letter-spacing:2px; }
+  .overlayBtns{ display:flex; gap:10px; }
+  .overlayBtns button{
+    border:none; color:#fff; font-weight:bold; padding:11px 20px; border-radius:26px; cursor:pointer;
+    font-size:13px; letter-spacing:.5px; box-shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+  #restartBtn{ background:linear-gradient(90deg,var(--blue),var(--red)); }
+  #changeBtn{ background:#3a2a3f; }
+
+  .footHint{ text-align:center; font-size:9px; opacity:.4; flex-shrink:0; padding:2px 0; }
+</style>
+</head>
+<body>
+
+<div id="selectScreen">
+  <div class="selectCard">
+    <h1>Ring Rumble</h1>
+    <div class="modeToggle">
+      <button class="modeBtn active" data-mode="2p">2 Players</button>
+      <button class="modeBtn" data-mode="ai">1 Player vs CPU</button>
+    </div>
+    <div class="pickRow">
+      <div class="pickLabel blueText">BLUE fighter</div>
+      <div class="emojiRow" id="blueEmojiRow"></div>
+    </div>
+    <div class="pickRow">
+      <div class="pickLabel redText">RED fighter</div>
+      <div class="emojiRow" id="redEmojiRow"></div>
+    </div>
+    <button id="fightBtn">FIGHT!</button>
+    <div class="hint">Best of 3 rounds &middot; Punch, Kick &amp; Block &middot; Grab power-ups in the ring &middot; Face-to-face controls: RED's pad is upside-down for the player sitting opposite</div>
+  </div>
+</div>
+
+<div id="gameScreen">
+  <div class="padWrap top" id="redPadWrap">
+    <div class="pad red-pad">
+      <button data-key="redRight">◀</button>
+      <button data-key="redJump">⤒</button>
+      <button data-key="redLeft">▶</button>
+      <button class="btnPunch" data-key="redPunch">PUNCH</button>
+      <button class="btnBlock" data-key="redBlock">🛡 BLOCK</button>
+      <button class="btnKick" data-key="redKick">KICK</button>
+    </div>
+  </div>
+
+  <div id="midWrap">
+    <h1 class="title">Ring Rumble</h1>
+    <div id="hud">
+      <div class="side blue">
+        <div class="name">BLUE <span class="dots" id="blueDots"></span></div>
+        <div class="healthWrap"><div class="healthFill blueFill" id="blueHealth"></div></div>
+      </div>
+      <div id="timer">30</div>
+      <div class="side red">
+        <div class="name"><span class="dots" id="redDots"></span> RED <span class="cpuTag" id="redCpuTag">CPU</span></div>
+        <div class="healthWrap"><div class="healthFill redFill" id="redHealth"></div></div>
+      </div>
+    </div>
+
+    <div id="arenaOuter">
+      <div id="arena">
+        <div class="floor"></div>
+
+        <div id="powerup">⚡</div>
+
+        <div id="blue" class="fighter blue">
+          <div class="comboPopup" id="comboBlue"></div>
+          <span class="emoji">🧍</span>
+          <div class="shieldBadge">🛡</div>
+          <div class="platform"></div>
+          <div class="impact" id="impactBlue">💥</div>
+        </div>
+
+        <div id="red" class="fighter red">
+          <div class="comboPopup" id="comboRed"></div>
+          <span class="emoji">🧍</span>
+          <div class="shieldBadge">🛡</div>
+          <div class="platform"></div>
+          <div class="impact" id="impactRed">💥</div>
+        </div>
+
+        <div id="banner"></div>
+
+        <div id="overlay">
+          <h2 id="resultText">Winner!</h2>
+          <div class="overlayBtns">
+            <button id="restartBtn">Rematch</button>
+            <button id="changeBtn">Change Fighters</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footHint">Blue keys: A D W · S punch · X kick · C block &nbsp;|&nbsp; Red keys: arrows · / punch · . kick · , block</div>
+  </div>
+
+  <div class="padWrap bottom" id="bluePadWrap">
+    <div class="pad blue-pad">
+      <button data-key="blueLeft">◀</button>
+      <button data-key="blueJump">⤒</button>
+      <button data-key="blueRight">▶</button>
+      <button class="btnPunch" data-key="bluePunch">PUNCH</button>
+      <button class="btnBlock" data-key="blueBlock">🛡 BLOCK</button>
+      <button class="btnKick" data-key="blueKick">KICK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- DOM refs ----------
+  const selectScreen = document.getElementById('selectScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  const redPadWrap = document.getElementById('redPadWrap');
+  const redCpuTag = document.getElementById('redCpuTag');
+  const blueEmojiRow = document.getElementById('blueEmojiRow');
+  const redEmojiRow = document.getElementById('redEmojiRow');
+  const fightBtn = document.getElementById('fightBtn');
+  const modeBtns = document.querySelectorAll('.modeBtn');
+
+  const blueEl = document.getElementById('blue');
+  const redEl = document.getElementById('red');
+  const impactBlue = document.getElementById('impactBlue');
+  const impactRed = document.getElementById('impactRed');
+  const comboBlueEl = document.getElementById('comboBlue');
+  const comboRedEl = document.getElementById('comboRed');
+  const blueHealthEl = document.getElementById('blueHealth');
+  const redHealthEl = document.getElementById('redHealth');
+  const blueDotsEl = document.getElementById('blueDots');
+  const redDotsEl = document.getElementById('redDots');
+  const timerEl = document.getElementById('timer');
+  const arenaEl = document.getElementById('arena');
+  const bannerEl = document.getElementById('banner');
+  const powerupEl = document.getElementById('powerup');
+  const overlay = document.getElementById('overlay');
+  const resultText = document.getElementById('resultText');
+  const restartBtn = document.getElementById('restartBtn');
+  const changeBtn = document.getElementById('changeBtn');
+
+  // ---------- Constants ----------
+  const EMOJIS = ['🧍','🥷','🤺','🥊','🦸','🧟','🧑‍🚀','🐯'];
+  const FIGHTER_W_PCT = 12;
+  const MAX_X = 100 - FIGHTER_W_PCT - 1;
+  const MIN_GAP = 9;
+  const MOVE_SPEED = 0.6;
+  const MAX_HEALTH = 100;
+  const PUNCH_DMG = 8, PUNCH_RANGE = 11, PUNCH_COOLDOWN = 350, PUNCH_KNOCKBACK = 3;
+  const KICK_DMG = 18, KICK_RANGE = 13, KICK_COOLDOWN = 1100, KICK_KNOCKBACK = 6;
+  const BLOCK_REDUCTION = 0.75;
+  const COMBO_WINDOW = 1000;
+  const ROUND_TIME = 30;
+  const ROUNDS_TO_WIN = 2;
+  const COLLECT_RANGE = 7;
+
+  // ---------- Select screen state ----------
+  let blueIndex = 0, redIndex = 1, mode = '2p';
+
+  function buildEmojiRow(row, side){
+    EMOJIS.forEach((em, i)=>{
+      const b = document.createElement('button');
+      b.className = 'emojiBtn';
+      b.textContent = em;
+      b.addEventListener('click', ()=>{
+        if(side==='blue'){ blueIndex = i; } else { redIndex = i; }
+        refreshEmojiSelection();
+      });
+      row.appendChild(b);
+    });
+  }
+  function refreshEmojiSelection(){
+    [...blueEmojiRow.children].forEach((b,i)=>b.classList.toggle('sel-blue', i===blueIndex));
+    [...redEmojiRow.children].forEach((b,i)=>b.classList.toggle('sel-red', i===redIndex));
+  }
+  buildEmojiRow(blueEmojiRow,'blue');
+  buildEmojiRow(redEmojiRow,'red');
+  refreshEmojiSelection();
+
+  modeBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      modeBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      mode = btn.dataset.mode;
+    });
+  });
+
+  // ---------- Audio ----------
+  let audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    }
+    if(audioCtx.state==='suspended') audioCtx.resume();
+  }
+  function playSound(type){
+    if(!audioCtx) return;
+    const ctx = audioCtx, t = ctx.currentTime;
+    function tone(freq1, freq2, dur, type_, gain){
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type_; o.frequency.setValueAtTime(freq1, t);
+      if(freq2) o.frequency.exponentialRampToValueAtTime(freq2, t+dur);
+      g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+dur);
+    }
+    if(type==='punch') tone(180,60,0.1,'square',0.25);
+    else if(type==='kick') tone(120,40,0.2,'sawtooth',0.35);
+    else if(type==='block') tone(500,null,0.08,'triangle',0.2);
+    else if(type==='pickup') tone(600,1200,0.15,'sine',0.2);
+    else if(type==='bell'){
+      [880,1320].forEach((f,i)=>{
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.type='sine'; o.frequency.value=f;
+        const st=t+i*0.05;
+        g.gain.setValueAtTime(0.001,st);
+        g.gain.exponentialRampToValueAtTime(0.3,st+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,st+0.6);
+        o.connect(g); g.connect(ctx.destination); o.start(st); o.stop(st+0.6);
+      });
+    } else if(type==='cheer'){
+      for(let i=0;i<6;i++){
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.type='sine'; const f=440+Math.random()*440; const st=t+i*0.08;
+        o.frequency.setValueAtTime(f,st);
+        g.gain.setValueAtTime(0.001,st);
+        g.gain.exponentialRampToValueAtTime(0.15,st+0.05);
+        g.gain.exponentialRampToValueAtTime(0.001,st+0.4);
+        o.connect(g); g.connect(ctx.destination); o.start(st); o.stop(st+0.4);
+      }
+    }
+  }
+
+  // ---------- Game state ----------
+  let state = { roundActive:false, matchOver:true, powerup:null };
+  let input = {
+    blueLeft:false, blueRight:false, blueJump:false, bluePunch:false, blueKick:false, blueBlock:false,
+    redLeft:false, redRight:false, redJump:false, redPunch:false, redKick:false, redBlock:false
+  };
+  let timerInterval = null, loopId = null, powerupCountdown = 8;
+
+  function randRange(a,b){ return a + Math.random()*(b-a); }
+  function newFighter(x){
+    return { x, health:MAX_HEALTH, hits:0, combo:0, lastHitTime:-99999,
+      cooldownPunch:0, cooldownKick:0, blocking:false, jumping:false,
+      speedBoostUntil:0, damageBoostUntil:0 };
+  }
+
+  // ---------- Input: keyboard ----------
+  const keyMap = {
+    'a':'blueLeft','A':'blueLeft','d':'blueRight','D':'blueRight','w':'blueJump','W':'blueJump',
+    's':'bluePunch','S':'bluePunch','x':'blueKick','X':'blueKick','c':'blueBlock','C':'blueBlock',
+    'ArrowLeft':'redLeft','ArrowRight':'redRight','ArrowUp':'redJump',
+    '/':'redPunch','.':'redKick',',':'redBlock'
+  };
+  document.addEventListener('keydown', e=>{ if(keyMap[e.key]){ input[keyMap[e.key]]=true; e.preventDefault(); } });
+  document.addEventListener('keyup', e=>{ if(keyMap[e.key]){ input[keyMap[e.key]]=false; } });
+
+  // ---------- Input: touch/pointer buttons ----------
+  document.querySelectorAll('.pad button').forEach(btn=>{
+    const key = btn.dataset.key;
+    const on = e=>{ e.preventDefault(); input[key]=true; };
+    const off = e=>{ e.preventDefault(); input[key]=false; };
+    btn.addEventListener('pointerdown', on);
+    btn.addEventListener('pointerup', off);
+    btn.addEventListener('pointercancel', off);
+    btn.addEventListener('pointerleave', off);
+  });
+
+  // ---------- Fight start ----------
+  fightBtn.addEventListener('click', ()=>{
+    ensureAudio();
+    selectScreen.style.display = 'none';
+    gameScreen.style.display = 'flex';
+    blueEl.querySelector('.emoji').textContent = EMOJIS[blueIndex];
+    redEl.querySelector('.emoji').textContent = EMOJIS[redIndex];
+    redPadWrap.style.display = (mode==='ai') ? 'none' : 'flex';
+    redCpuTag.style.display = (mode==='ai') ? 'inline' : 'none';
+    initMatch();
+  });
+
+  restartBtn.addEventListener('click', ()=>{ overlay.style.display='none'; initMatch(); });
+  changeBtn.addEventListener('click', backToSelect);
+
+  function backToSelect(){
+    state.matchOver = true;
+    if(timerInterval) clearInterval(timerInterval);
+    if(loopId) cancelAnimationFrame(loopId);
+    overlay.style.display = 'none';
+    gameScreen.style.display = 'none';
+    selectScreen.style.display = 'flex';
+  }
+
+  // ---------- Match / round flow ----------
+  function initMatch(){
+    state = {
+      round:1, blueRoundWins:0, redRoundWins:0, matchOver:false, roundActive:false,
+      blue:newFighter(8), red:newFighter(78), powerup:null, aiNextDecision:0
+    };
+    input.blueLeft=input.blueRight=input.blueJump=input.bluePunch=input.blueKick=input.blueBlock=false;
+    input.redLeft=input.redRight=input.redJump=input.redPunch=input.redKick=input.redBlock=false;
+    updateRoundDots();
+    overlay.style.display = 'none';
+
+    if(timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(()=>{
+      if(!state.roundActive || state.matchOver) return;
+      state.roundTime--;
+      timerEl.textContent = Math.max(0, state.roundTime);
+      if(state.roundTime<=0) endRound('time');
+    }, 1000);
+
+    startRound();
+    if(loopId) cancelAnimationFrame(loopId);
+    loop();
+  }
+
+  function startRound(){
+    state.blue = newFighter(8);
+    state.red = newFighter(78);
+    state.roundTime = ROUND_TIME;
+    timerEl.textContent = state.roundTime;
+    clearPowerup();
+    positionFighters();
+    updateHealthBars();
+    blueEl.classList.remove('jump','attack-punch','attack-kick','hitflash','blocking');
+    redEl.classList.remove('jump','attack-punch','attack-kick','hitflash','blocking');
+    state.roundActive = false;
+
+    showBanner('ROUND ' + state.round, 900, ()=>{
+      showBanner('FIGHT!', 700, ()=>{
+        state.roundActive = true;
+        playSound('bell');
+      });
+    });
+  }
+
+  function endRound(reason, winnerSide){
+    state.roundActive = false;
+    let winner = winnerSide || null;
+    if(!winner){
+      if(state.blue.health > state.red.health) winner='blue';
+      else if(state.red.health > state.blue.health) winner='red';
+      else if(state.blue.hits > state.red.hits) winner='blue';
+      else if(state.red.hits > state.blue.hits) winner='red';
+    }
+    if(winner==='blue') state.blueRoundWins++;
+    else if(winner==='red') state.redRoundWins++;
+    updateRoundDots();
+    playSound('bell');
+
+    const text = winner==='blue' ? '🔵 BLUE WINS ROUND ' + state.round
+      : winner==='red' ? '🔴 RED WINS ROUND ' + state.round
+      : 'DRAW ROUND';
+
+    showBanner(text, 1600, ()=>{
+      if(state.blueRoundWins>=ROUNDS_TO_WIN || state.redRoundWins>=ROUNDS_TO_WIN){
+        endMatch(state.blueRoundWins>state.redRoundWins ? 'blue':'red');
+      } else if(state.round>=5){
+        endMatch(state.blueRoundWins>=state.redRoundWins ? 'blue':'red');
+      } else {
+        state.round++;
+        startRound();
+      }
+    });
+  }
+
+  function endMatch(winner){
+    state.matchOver = true;
+    clearInterval(timerInterval);
+    resultText.textContent = winner==='blue' ? '🔵 BLUE WINS THE MATCH!' : '🔴 RED WINS THE MATCH!';
+    overlay.style.display = 'flex';
+    playSound('cheer');
+  }
+
+  function showBanner(text, duration, cb){
+    bannerEl.textContent = text;
+    bannerEl.classList.add('show');
+    setTimeout(()=>{
+      bannerEl.classList.remove('show');
+      if(cb) cb();
+    }, duration);
+  }
+
+  function updateRoundDots(){
+    blueDotsEl.textContent = '●'.repeat(state.blueRoundWins) + '○'.repeat(Math.max(0,ROUNDS_TO_WIN-state.blueRoundWins));
+    redDotsEl.textContent = '○'.repeat(Math.max(0,ROUNDS_TO_WIN-state.redRoundWins)) + '●'.repeat(state.redRoundWins);
+  }
+  function updateHealthBars(){
+    blueHealthEl.style.width = Math.max(0,state.blue.health) + '%';
+    redHealthEl.style.width = Math.max(0,state.red.health) + '%';
+  }
+  function positionFighters(){
+    blueEl.style.left = state.blue.x + '%';
+    redEl.style.left = state.red.x + '%';
+  }
+
+  // ---------- Collision (symmetric — fixes one-sided push bug) ----------
+  function resolveCollision(){
+    state.blue.x = Math.max(1, Math.min(MAX_X, state.blue.x));
+    state.red.x = Math.max(1, Math.min(MAX_X, state.red.x));
+    const gap = state.red.x - state.blue.x;
+    if(gap < MIN_GAP){
+      const overlap = MIN_GAP - gap;
+      state.blue.x -= overlap/2;
+      state.red.x += overlap/2;
+    }
+    state.blue.x = Math.max(1, Math.min(MAX_X, state.blue.x));
+    state.red.x = Math.max(1, Math.min(MAX_X, state.red.x));
+    if(state.red.x - state.blue.x < MIN_GAP){
+      if(state.blue.x > 1) state.blue.x = Math.max(1, state.red.x - MIN_GAP);
+      else state.red.x = Math.min(MAX_X, state.blue.x + MIN_GAP);
+    }
+  }
+
+  function tryJump(el, fighter){
+    if(fighter.jumping) return;
+    fighter.jumping = true;
+    el.classList.add('jump');
+    setTimeout(()=>{ fighter.jumping = false; el.classList.remove('jump'); }, 420);
+  }
+
+  function showCombo(isBlue, combo){
+    const el = isBlue ? comboBlueEl : comboRedEl;
+    el.textContent = combo + 'x COMBO!';
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  }
+
+  function shakeArena(){
+    arenaEl.classList.remove('shake'); void arenaEl.offsetWidth; arenaEl.classList.add('shake');
+  }
+
+  function attemptAttack(att, atkEl, def, defEl, defImpactEl, type, isBlue){
+    const cdKey = type==='punch' ? 'cooldownPunch' : 'cooldownKick';
+    if(att[cdKey] > 0) return;
+    att[cdKey] = type==='punch' ? PUNCH_COOLDOWN : KICK_COOLDOWN;
+    const cls = 'attack-'+type;
+    atkEl.classList.add(cls);
+    setTimeout(()=>atkEl.classList.remove(cls), type==='punch'?150:260);
+
+    const range = type==='punch' ? PUNCH_RANGE : KICK_RANGE;
+    const dist = Math.abs(att.x - def.x);
+    if(dist > range) return;
+
+    const now = performance.now();
+    att.combo = (now - att.lastHitTime < COMBO_WINDOW) ? att.combo+1 : 1;
+    att.lastHitTime = now;
+
+    let dmg = type==='punch' ? PUNCH_DMG : KICK_DMG;
+    dmg += Math.min(att.combo-1, 5) * 2;
+    if(now < att.damageBoostUntil) dmg *= 2;
+
+    if(def.blocking){
+      dmg *= (1-BLOCK_REDUCTION);
+      playSound('block');
+    } else if(type==='kick'){
+      playSound('kick');
+      shakeArena();
+    } else {
+      playSound('punch');
+    }
+
+    def.health = Math.max(0, def.health - dmg);
+    att.hits++;
+
+    let kb = type==='punch' ? PUNCH_KNOCKBACK : KICK_KNOCKBACK;
+    if(def.blocking) kb *= 0.3;
+    def.x += isBlue ? kb : -kb;
+    def.x = Math.max(1, Math.min(MAX_X, def.x));
+
+    defEl.classList.add('hitflash');
+    defImpactEl.textContent = type==='kick' ? '💥' : '✨';
+    defImpactEl.classList.remove('show'); void defImpactEl.offsetWidth; defImpactEl.classList.add('show');
+    setTimeout(()=>defEl.classList.remove('hitflash'), 260);
+
+    if(att.combo>=2) showCombo(isBlue, att.combo);
+
+    updateHealthBars();
+    if(def.health<=0 && state.roundActive){
+      endRound('ko', isBlue ? 'blue' : 'red');
+    }
+  }
+
+  // ---------- Power-ups ----------
+  function clearPowerup(){
+    state.powerup = null;
+    powerupEl.style.display = 'none';
+    powerupCountdown = randRange(6,10);
+  }
+  function spawnPowerup(){
+    const type = Math.random()<0.5 ? 'speed' : 'power';
+    const x = randRange(25,75);
+    state.powerup = { type, x };
+    powerupEl.textContent = type==='speed' ? '⚡' : '💪';
+    powerupEl.style.left = x + '%';
+    powerupEl.style.display = 'block';
+  }
+  function updatePowerupCollection(){
+    if(!state.powerup) return;
+    const p = state.powerup;
+    const dB = Math.abs(state.blue.x - p.x);
+    const dR = Math.abs(state.red.x - p.x);
+    const now = performance.now();
+    if(dB <= COLLECT_RANGE){
+      if(p.type==='speed') state.blue.speedBoostUntil = now+5000; else state.blue.damageBoostUntil = now+5000;
+      playSound('pickup'); state.powerup=null; powerupEl.style.display='none';
+    } else if(dR <= COLLECT_RANGE){
+      if(p.type==='speed') state.red.speedBoostUntil = now+5000; else state.red.damageBoostUntil = now+5000;
+      playSound('pickup'); state.powerup=null; powerupEl.style.display='none';
+    }
+  }
+  setInterval(()=>{
+    if(!state.roundActive || state.matchOver) return;
+    powerupCountdown -= 2;
+    if(powerupCountdown<=0){
+      powerupCountdown = randRange(7,12);
+      if(!state.powerup) spawnPowerup();
+    }
+  }, 2000);
+
+  // ---------- Simple CPU AI (controls red in 1P mode) ----------
+  function updateAI(now){
+    if(now < state.aiNextDecision) return;
+    state.aiNextDecision = now + 300 + Math.random()*400;
+    const dist = state.red.x - state.blue.x;
+    const absDist = Math.abs(dist);
+    input.redLeft = false; input.redRight = false; input.redBlock = false; input.redJump = false;
+
+    if(absDist > 22){
+      if(dist > 0) input.redLeft = true; else input.redRight = true;
+    } else if(absDist < 7 && Math.random()<0.3){
+      if(dist > 0) input.redRight = true; else input.redLeft = true;
+    }
+
+    const r = Math.random();
+    input.redPunch = false; input.redKick = false;
+    if(absDist <= KICK_RANGE+2 && r<0.32) input.redKick = true;
+    else if(absDist <= PUNCH_RANGE+2 && r<0.55) input.redPunch = true;
+    if(r>0.88 && absDist < PUNCH_RANGE+4) input.redBlock = true;
+    if(Math.random()<0.04) input.redJump = true;
+  }
+
+  // ---------- Main loop ----------
+  function loop(){
+    if(state.matchOver){ loopId = requestAnimationFrame(loop); return; }
+    if(state.roundActive){
+      const now = performance.now();
+
+      if(mode==='ai') updateAI(now);
+
+      state.blue.blocking = input.blueBlock;
+      state.red.blocking = input.redBlock;
+      blueEl.classList.toggle('blocking', state.blue.blocking);
+      redEl.classList.toggle('blocking', state.red.blocking);
+
+      const blueSpeed = MOVE_SPEED * (now < state.blue.speedBoostUntil ? 1.6 : 1);
+      const redSpeed = MOVE_SPEED * (now < state.red.speedBoostUntil ? 1.6 : 1);
+
+      if(!state.blue.blocking){
+        if(input.blueLeft) state.blue.x -= blueSpeed;
+        if(input.blueRight) state.blue.x += blueSpeed;
+      }
+      if(!state.red.blocking){
+        if(input.redLeft) state.red.x -= redSpeed;
+        if(input.redRight) state.red.x += redSpeed;
+      }
+
+      resolveCollision();
+      positionFighters();
+
+      if(input.blueJump) tryJump(blueEl, state.blue);
+      if(input.redJump) tryJump(redEl, state.red);
+
+      if(!state.blue.blocking){
+        if(input.bluePunch) attemptAttack(state.blue, blueEl, state.red, redEl, impactRed, 'punch', true);
+        if(input.blueKick) attemptAttack(state.blue, blueEl, state.red, redEl, impactRed, 'kick', true);
+      }
+      if(!state.red.blocking){
+        if(input.redPunch) attemptAttack(state.red, redEl, state.blue, blueEl, impactBlue, 'punch', false);
+        if(input.redKick) attemptAttack(state.red, redEl, state.blue, blueEl, impactBlue, 'kick', false);
+      }
+
+      if(state.blue.cooldownPunch>0) state.blue.cooldownPunch -= 16;
+      if(state.blue.cooldownKick>0) state.blue.cooldownKick -= 16;
+      if(state.red.cooldownPunch>0) state.red.cooldownPunch -= 16;
+      if(state.red.cooldownKick>0) state.red.cooldownKick -= 16;
+
+      updatePowerupCollection();
+    }
+    loopId = requestAnimationFrame(loop);
+  }
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{ /* offline install not critical */ });
+    });
+  }
+})();
+</script>
+</body>
+</html>
