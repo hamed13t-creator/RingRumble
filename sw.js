@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ring-rumble-v4';
+const CACHE_NAME = 'ring-rumble-v5';
 const ASSETS = [
   './',
   './index.html',
