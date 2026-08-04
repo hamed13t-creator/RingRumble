@@ -27,6 +27,18 @@
   }
   button{ font-family:inherit; }
 
+  /* Portrait lock fallback: if the OS/browser reports landscape (e.g. Screen Orientation
+     Lock API isn't available, such as on iOS Safari), force-rotate the whole page back so
+     it always renders upright in portrait regardless of physical phone orientation. This
+     stops a flipped phone from swapping which player's controls appear where. */
+  @media screen and (orientation:landscape){
+    html{
+      width:100vh; height:100vw;
+      transform:rotate(-90deg); transform-origin:left top;
+      position:absolute; top:100%; left:0;
+    }
+  }
+
   /* ---------- Select Screen ---------- */
   #selectScreen{
     height:100%; display:flex; align-items:center; justify-content:center; padding:16px; overflow-y:auto;
@@ -128,9 +140,11 @@
   }
   .floor{ position:absolute; left:0; right:0; bottom:0; height:8%; background:linear-gradient(#3a2a30,#241820); border-top:2px solid #4a3a44; }
 
-  .fighter{ position:absolute; width:15%; min-width:44px; text-align:center; transition:left .04s linear, top .04s linear; will-change:left,top; z-index:5; }
+  .fighter{ position:absolute; width:15%; min-width:44px; text-align:center; will-change:left,top; z-index:5; }
   .rigWrap{ transition:transform .1s ease; }
-  .tiltWrap{ transform-origin:50% 92%; transition:transform .15s ease; }
+  .spinWrap{ transform-origin:50% 55%; }
+  .fighter.red .spinWrap{ transform:rotate(180deg); }
+  .tiltWrap{ transform-origin:50% 100%; transition:transform .18s ease; transform-style:preserve-3d; }
   .fighter .platform{ width:55%; height:8px; margin:2px auto 0; border-radius:50%; filter:blur(1px); }
   .fighter.blue .platform{ background:radial-gradient(ellipse,rgba(46,107,255,.55),transparent 70%); }
   .fighter.red .platform{ background:radial-gradient(ellipse,rgba(255,59,59,.55),transparent 70%); }
@@ -138,18 +152,93 @@
   .rig{ width:100%; display:block; overflow:visible; filter:drop-shadow(0 4px 5px rgba(0,0,0,.5)); }
   /* facing (left/right) is set dynamically in JS based on relative position, on the svg itself */
 
-  .armFront,.armBack{ transform-origin:30px 32px; transition:transform .09s ease; }
-  .legFront,.legBack{ transform-origin:30px 60px; transition:transform .09s ease; }
-  .torsoG{ transform-origin:30px 46px; }
+  /* transform-origins for the jointed stick-figure rig, in shared viewBox coordinates */
+  .armFrontUpper,.armBackUpper{ transform-origin:30px 27px; }
+  .armFrontLower{ transform-origin:37px 42px; }
+  .armBackLower{ transform-origin:23px 42px; }
+  .legFrontUpper,.legBackUpper{ transform-origin:30px 58px; }
+  .legFrontLower{ transform-origin:37px 75px; }
+  .legBackLower{ transform-origin:24px 75px; }
+  .torsoG{ transform-origin:30px 58px; }
+  .motionLines{ transition:opacity .1s; }
 
-  .fighter.jump .rigWrap{ transform:translateY(-22px); }
-  .fighter.jump .legFront{ transform:rotate(24deg) translateY(-2px); }
-  .fighter.jump .legBack{ transform:rotate(-24deg) translateY(-2px); }
+  .fighter.jump .rigWrap{ transform:translateY(-24px); }
+  .fighter.jump .legFrontUpper{ transform:rotate(-38deg); }
+  .fighter.jump .legFrontLower{ transform:rotate(48deg); }
+  .fighter.jump .legBackUpper{ transform:rotate(30deg); }
+  .fighter.jump .legBackLower{ transform:rotate(-42deg); }
 
-  .fighter.attack-punch .armFront{ transform:rotate(-72deg) scale(1.1); }
-  .fighter.attack-kick .legFront{ transform:rotate(-85deg) translateY(-4px) scale(1.05); }
-  .fighter.blocking .armFront{ transform:rotate(-30deg) translateX(-6px); }
-  .fighter.blocking .armBack{ transform:rotate(-55deg) translateX(-2px); }
+  /* ---- Punch: anticipation -> full-extension strike -> elastic recover ---- */
+  @keyframes punchUpper{
+    0%{ transform:rotate(0deg); }
+    14%{ transform:rotate(14deg); }
+    45%{ transform:rotate(-96deg); }
+    72%{ transform:rotate(-66deg); }
+    100%{ transform:rotate(0deg); }
+  }
+  @keyframes punchLower{
+    0%{ transform:rotate(0deg); }
+    14%{ transform:rotate(22deg); }
+    45%{ transform:rotate(-72deg); }
+    72%{ transform:rotate(-48deg); }
+    100%{ transform:rotate(0deg); }
+  }
+  @keyframes punchTorso{
+    0%,100%{ transform:rotate(0deg); }
+    45%{ transform:rotate(-9deg); }
+    72%{ transform:rotate(-3deg); }
+  }
+  @keyframes punchLinesFade{
+    0%,35%{ opacity:0; }
+    45%{ opacity:1; }
+    65%{ opacity:.4; }
+    80%,100%{ opacity:0; }
+  }
+  .fighter.attack-punch .armFrontUpper{ animation:punchUpper .34s cubic-bezier(.22,.85,.35,1); }
+  .fighter.attack-punch .armFrontLower{ animation:punchLower .34s cubic-bezier(.22,.85,.35,1); }
+  .fighter.attack-punch .torsoG{ animation:punchTorso .34s ease-out; }
+  .fighter.attack-punch .punchLines{ animation:punchLinesFade .34s ease-out; }
+
+  /* ---- Kick: knee chamber -> hard extension -> recoil ---- */
+  @keyframes kickThigh{
+    0%{ transform:rotate(0deg); }
+    16%{ transform:rotate(22deg); }
+    48%{ transform:rotate(-102deg); }
+    75%{ transform:rotate(-74deg); }
+    100%{ transform:rotate(0deg); }
+  }
+  @keyframes kickShin{
+    0%{ transform:rotate(0deg); }
+    16%{ transform:rotate(46deg); }
+    48%{ transform:rotate(-62deg); }
+    75%{ transform:rotate(-38deg); }
+    100%{ transform:rotate(0deg); }
+  }
+  @keyframes kickTorso{
+    0%,100%{ transform:rotate(0deg); }
+    48%{ transform:rotate(-11deg); }
+    75%{ transform:rotate(-4deg); }
+  }
+  @keyframes kickLinesFade{
+    0%,38%{ opacity:0; }
+    48%{ opacity:1; }
+    68%{ opacity:.4; }
+    82%,100%{ opacity:0; }
+  }
+  .fighter.attack-kick .legFrontUpper{ animation:kickThigh .38s cubic-bezier(.22,.85,.35,1); }
+  .fighter.attack-kick .legFrontLower{ animation:kickShin .38s cubic-bezier(.22,.85,.35,1); }
+  .fighter.attack-kick .torsoG{ animation:kickTorso .38s ease-out; }
+  .fighter.attack-kick .kickLines{ animation:kickLinesFade .38s ease-out; }
+
+  /* ---- Block: both arms raised to guard the face ---- */
+  .fighter.blocking .armFrontUpper{ transform:rotate(8deg); transition:transform .1s ease; }
+  .fighter.blocking .armFrontLower{ transform:rotate(6deg); transition:transform .1s ease; }
+  .fighter.blocking .armBackUpper{ transform:rotate(-6deg); transition:transform .1s ease; }
+  .fighter.blocking .armBackLower{ transform:rotate(-4deg); transition:transform .1s ease; }
+
+  /* ---- Dash: trailing speed-line streaks behind the runner ---- */
+  .dashLines{ transition:opacity .1s; }
+  .fighter.dashing .dashLines{ opacity:1; }
 
   .fighter.special .rig{ filter:drop-shadow(0 0 20px var(--gold)) brightness(1.4); }
 
@@ -309,8 +398,10 @@
             <div class="comboPopup" id="comboBlue"></div>
             <div class="shieldBadge">🛡</div>
             <div class="rigWrap">
-              <div class="tiltWrap">
-                <div class="svgHolder"></div>
+              <div class="spinWrap">
+                <div class="tiltWrap">
+                  <div class="svgHolder"></div>
+                </div>
               </div>
             </div>
             <div class="platform"></div>
@@ -321,8 +412,10 @@
             <div class="comboPopup" id="comboRed"></div>
             <div class="shieldBadge">🛡</div>
             <div class="rigWrap">
-              <div class="tiltWrap">
-                <div class="svgHolder"></div>
+              <div class="spinWrap">
+                <div class="tiltWrap">
+                  <div class="svgHolder"></div>
+                </div>
               </div>
             </div>
             <div class="platform"></div>
@@ -382,14 +475,14 @@
 
   function accessorySVG(ch){
     switch(ch.accessory){
-      case 'headband': return `<rect x="19" y="12" width="22" height="4" fill="${ch.accent}"/><path class="flutter" d="M41,13 Q50,10 54,18 Q49,15 44,17 Z" fill="${ch.accent}"/>`;
-      case 'topknot': return `<circle cx="30" cy="7" r="3.5" fill="${ch.color}"/><rect x="28.5" y="8" width="3" height="4" fill="${ch.color}"/><rect x="18" y="44" width="24" height="5" rx="1" fill="${ch.accent}"/>`;
-      case 'wristbands': return `<rect x="14" y="51" width="8" height="5" rx="1.5" fill="${ch.accent}"/><rect x="38" y="51" width="8" height="5" rx="1.5" fill="${ch.accent}"/><rect x="14" y="94" width="9" height="5" rx="1.5" fill="${ch.accent}"/><rect x="36" y="94" width="9" height="5" rx="1.5" fill="${ch.accent}"/>`;
-      case 'antenna': return `<line x1="30" y1="8" x2="30" y2="2" stroke="${ch.accent}" stroke-width="2"/><circle cx="30" cy="2" r="2.2" fill="${ch.accent}"/><rect x="23" y="13" width="14" height="6" rx="1" fill="#12181f" opacity=".9"/>`;
-      case 'robe': return `<path d="M20,32 Q30,28 40,32 L43,64 Q30,69 17,64 Z" fill="${ch.accent}" opacity=".6"/><path class="flutter" d="M17,50 Q10,58 14,68 Q17,60 20,58 Z" fill="${ch.accent}" opacity=".75"/>`;
-      case 'helmet': return `<circle cx="30" cy="18" r="12" fill="none" stroke="${ch.accent}" stroke-width="2.5"/><rect x="23" y="13" width="14" height="8" rx="4" fill="#bfe6ff" opacity=".55"/><path d="M25,14 L29,15 L25,17 Z" fill="#fff" opacity=".7"/>`;
-      case 'straps': return `<path d="M22,30 L38,62 M38,30 L22,62" stroke="${ch.accent}" stroke-width="3.2" opacity=".85"/>`;
-      case 'gloves': return `<rect x="24" y="9" width="12" height="4" rx="2" fill="#fff" opacity=".85"/>`;
+      case 'headband': return `<rect x="19" y="9" width="22" height="4" fill="${ch.accent}"/><path class="flutter" d="M41,10 Q50,7 54,15 Q49,12 44,14 Z" fill="${ch.accent}"/>`;
+      case 'topknot': return `<circle cx="30" cy="4" r="3.5" fill="${ch.color}"/><rect x="28.5" y="5" width="3" height="4" fill="${ch.color}"/><rect x="18" y="52" width="24" height="5" rx="1" fill="${ch.accent}"/>`;
+      case 'wristbands': return `<circle cx="19" cy="29" r="4.5" fill="${ch.accent}"/><circle cx="41" cy="29" r="4.5" fill="${ch.accent}"/><rect x="15" y="92" width="9" height="5" rx="1.5" fill="${ch.accent}"/><rect x="36" y="92" width="9" height="5" rx="1.5" fill="${ch.accent}"/>`;
+      case 'antenna': return `<line x1="30" y1="6" x2="30" y2="0" stroke="${ch.accent}" stroke-width="2"/><circle cx="30" cy="0" r="2.2" fill="${ch.accent}"/><rect x="23" y="11" width="14" height="6" rx="1" fill="#12181f" opacity=".9"/>`;
+      case 'robe': return `<path class="flutter" d="M18,50 Q11,58 15,68 Q18,60 21,58 Z" fill="${ch.accent}" opacity=".75"/><path class="flutter" d="M42,50 Q49,58 45,68 Q42,60 39,58 Z" fill="${ch.accent}" opacity=".7"/>`;
+      case 'helmet': return `<circle cx="30" cy="15" r="12" fill="none" stroke="${ch.accent}" stroke-width="2.5"/><rect x="23" y="10" width="14" height="8" rx="4" fill="#bfe6ff" opacity=".55"/><path d="M25,11 L29,12 L25,14 Z" fill="#fff" opacity=".7"/>`;
+      case 'straps': return `<path d="M23,27 L37,58 M37,27 L23,58" stroke="${ch.accent}" stroke-width="3.2" opacity=".85"/>`;
+      case 'gloves': return `<rect x="24" y="6" width="12" height="4" rx="2" fill="#fff" opacity=".85"/>`;
       default: return '';
     }
   }
@@ -401,31 +494,59 @@
     const eyeGlow = isRobot ? `style="filter:drop-shadow(0 0 2px ${ch.accent})"` : '';
     return `
       <g class="face">
-        <path d="M23,15 Q26,12.5 29,14" stroke="#3a2418" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-        <path d="M31,14 Q34,12.5 37,15" stroke="#3a2418" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-        <ellipse cx="26" cy="18" rx="1.7" ry="${isRobot?2.2:1.9}" fill="${eyeFill}" ${eyeGlow}/>
-        <ellipse cx="34" cy="18" rx="1.7" ry="${isRobot?2.2:1.9}" fill="${eyeFill}" ${eyeGlow}/>
-        <path class="mouthNeutral" d="M26,23 Q30,24.5 34,23" stroke="#3a2418" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-        <ellipse class="mouthOpen" cx="30" cy="23.5" rx="3" ry="2.4" fill="#5c2418" opacity="0"/>
+        <path d="M23,12 Q26,9.5 29,11" stroke="#3a2418" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+        <path d="M31,11 Q34,9.5 37,12" stroke="#3a2418" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+        <ellipse cx="26" cy="15" rx="1.7" ry="${isRobot?2.2:1.9}" fill="${eyeFill}" ${eyeGlow}/>
+        <ellipse cx="34" cy="15" rx="1.7" ry="${isRobot?2.2:1.9}" fill="${eyeFill}" ${eyeGlow}/>
+        <path class="mouthNeutral" d="M26,20 Q30,21.5 34,20" stroke="#3a2418" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <ellipse class="mouthOpen" cx="30" cy="20.5" rx="3" ry="2.4" fill="#5c2418" opacity="0"/>
       </g>`;
   }
 
+  // Jointed stick-figure rig: 2-segment arms/legs (upper+lower), boxer guard rest pose.
+  // Nested groups so lower-segment rotation pivots correctly with the parent upper-segment.
   function fighterSVGMarkup(ch){
-    const legBackX = 20, legFrontX = 40;
-    const tw = 8*ch.torsoScale;
+    const tw = 3.5*ch.torsoScale; // torso "thickness" via stroke-width only, kept slim for stick-figure look
     return `<svg class="rig" viewBox="0 0 60 100">
-      <g class="legBack"><path d="M30,60 L${legBackX},98" stroke="${ch.color}" stroke-width="9" stroke-linecap="round"/></g>
-      <g class="legFront"><path d="M30,60 L${legFrontX},98" stroke="${shade(ch.color,18)}" stroke-width="9" stroke-linecap="round"/>${ch.accessory==='wristbands' ? `<rect x="${legFrontX-4.5}" y="90" width="9" height="5" rx="1.5" fill="${ch.accent}"/>` : ''}</g>
-      <g class="torsoG">
-        <path d="M${30-tw},30 Q30,26 ${30+tw},30 L${30+tw},62 Q30,66 ${30-tw},62 Z" fill="${ch.color}"/>
-        <path d="M${30-tw},30 Q30,26 ${30+tw},30 L${30+tw*0.55},34 Q30,31 ${30-tw*0.55},34 Z" fill="#fff" opacity=".14"/>
-        <path d="M${30+tw*0.3},34 L${30+tw},32 L${30+tw},62 Q30,66 ${30+tw*0.3},63 Z" fill="#000" opacity=".16"/>
+      <g class="motionLines kickLines" opacity="0">
+        <path d="M46,80 L56,76" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
+        <path d="M46,86 L58,84" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
+        <path d="M44,92 L55,93" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
       </g>
-      <g class="armBack"><path d="M30,32 L18,55" stroke="${shade(ch.color,-12)}" stroke-width="8" stroke-linecap="round"/></g>
-      <circle class="head" cx="30" cy="18" r="10" fill="${ch.skin}"/>
+
+      <g class="legBackUpper"><path d="M30,58 L24,75" stroke="${ch.color}" stroke-width="7.5" stroke-linecap="round"/>
+        <g class="legBackLower"><path d="M24,75 L19,96" stroke="${shade(ch.color,14)}" stroke-width="7" stroke-linecap="round"/></g>
+      </g>
+      <g class="legFrontUpper"><path d="M30,58 L37,75" stroke="${shade(ch.color,10)}" stroke-width="7.5" stroke-linecap="round"/>
+        <g class="legFrontLower"><path d="M37,75 L42,96" stroke="${shade(ch.color,24)}" stroke-width="7" stroke-linecap="round"/>${ch.accessory==='wristbands' ? `<rect x="37.5" y="88" width="9" height="5" rx="1.5" fill="${ch.accent}"/>` : ''}</g>
+      </g>
+
+      <g class="torsoG"><path d="M30,26 L30,58" stroke="${ch.color}" stroke-width="${11*ch.torsoScale}" stroke-linecap="round"/></g>
+
+      <g class="armBackUpper"><path d="M30,27 L23,42" stroke="${shade(ch.color,-14)}" stroke-width="6.5" stroke-linecap="round"/>
+        <g class="armBackLower"><path d="M23,42 L19,29" stroke="${shade(ch.color,-20)}" stroke-width="6" stroke-linecap="round"/></g>
+      </g>
+
+      <circle class="head" cx="30" cy="15" r="9" fill="${ch.skin}"/>
       ${faceSVG(ch)}
       ${accessorySVG(ch)}
-      <g class="armFront"><path d="M30,32 L42,55" stroke="${ch.accent}" stroke-width="8" stroke-linecap="round"/>${ch.accessory==='gloves' ? `<circle cx="42" cy="55" r="6.8" fill="#c0392b"/><circle cx="42" cy="55" r="6.8" fill="none" stroke="#7a1f1f" stroke-width="1"/>` : ''}</g>
+
+      <g class="armFrontUpper"><path d="M30,27 L37,42" stroke="${ch.accent}" stroke-width="6.5" stroke-linecap="round"/>
+        <g class="armFrontLower">
+          <g class="motionLines punchLines" opacity="0">
+            <path d="M46,25 L57,22" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
+            <path d="M45,31 L57,31" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
+            <path d="M45,37 L56,40" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <path d="M37,42 L41,29" stroke="${ch.accent}" stroke-width="6" stroke-linecap="round"/>${ch.accessory==='gloves' ? `<circle cx="41" cy="29" r="6.4" fill="#c0392b"/><circle cx="41" cy="29" r="6.4" fill="none" stroke="#7a1f1f" stroke-width="1"/>` : ''}
+        </g>
+      </g>
+
+      <g class="dashLines" opacity="0">
+        <path d="M2,30 L14,30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+        <path d="M0,50 L13,50" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".65"/>
+        <path d="M3,70 L15,70" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".5"/>
+      </g>
     </svg>`;
   }
   function shade(hex, amt){
@@ -900,13 +1021,14 @@
     el.style.transform = `translate(-50%,-60%) scale(${scale.toFixed(3)})`;
     const rig = el.querySelector('.rig');
     if(rig) rig.style.transform = `scaleX(${facesRight ? 1 : -1})`;
-    // tilt toward ring center, more pronounced the closer/bigger (deeper) the fighter is;
-    // the lean-axis direction is unaffected by the 180deg red flip (a line maps onto
-    // itself under 180deg rotation), so the same sign convention works for both.
-    const tiltMag = 6 + (f.y/100)*9;
+    // True z-axis "coming out of the screen" tilt via 3D perspective + rotateY (turning
+    // around the vertical axis, which foreshortens the silhouette), NOT a flat 2D rotate
+    // (which just looks like bending sideways). Both fighters turn toward ring center,
+    // more pronounced the closer/bigger (deeper) they are, for extra depth/dynamism.
+    const tiltMag = 8 + (f.y/100)*10;
     const tiltSign = isRed ? -1 : 1;
     const tilt = el.querySelector('.tiltWrap');
-    if(tilt) tilt.style.transform = `rotate(${(isRed?180:0) + tiltSign*tiltMag}deg)`;
+    if(tilt) tilt.style.transform = `perspective(600px) rotateY(${tiltSign*tiltMag}deg)`;
     el.style.zIndex = Math.round(topPct);
   }
 
@@ -947,8 +1069,8 @@
     const cdMult = (s.cooldownMult||1) * (type==='punch' ? (s.punchCooldownMult||1) : 1);
     att[cdKey] = (type==='punch' ? PUNCH_COOLDOWN : KICK_COOLDOWN) * cdMult;
     const cls = 'attack-'+type;
-    atkEl.classList.add(cls);
-    setTimeout(()=>atkEl.classList.remove(cls), type==='punch'?150:260);
+    atkEl.classList.remove(cls); void atkEl.offsetWidth; atkEl.classList.add(cls); // force restart on rapid re-attacks
+    setTimeout(()=>atkEl.classList.remove(cls), type==='punch'?340:380);
 
     const range = type==='punch' ? PUNCH_RANGE : KICK_RANGE;
     const dist = fighterDistance(att, def);
@@ -1240,6 +1362,15 @@
     f.x += j.x * MOVE_SPEED * speedMult;
     f.y += j.y * MOVE_SPEED * speedMult;
   }
+
+  // Attempt a hard orientation lock (works when launched as an installed/standalone PWA
+  // on Android Chrome). The CSS media-query trick above covers browsers/OSes (like iOS
+  // Safari) where this API isn't available at all.
+  try{
+    if(screen.orientation && screen.orientation.lock){
+      screen.orientation.lock('portrait').catch(()=>{});
+    }
+  }catch(e){}
 
   if('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{
