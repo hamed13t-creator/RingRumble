@@ -1,11 +1,11 @@
 {
   "name": "Ring Rumble",
   "short_name": "RingRumble",
-  "description": "2-player face-to-face emoji kickboxing game",
+  "description": "2-player face-to-face 2.5D emoji kickboxing game",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait",
   "background_color": "#0a0810",
   "theme_color": "#171018",
   "icons": [
