@@ -125,10 +125,18 @@
   }
   /* diagonal ring guide lines to sell the ring/perspective */
   .ringFloor{
-    position:absolute; left:6%; right:6%; top:14%; bottom:14%;
-    border:2px solid rgba(255,255,255,.08); border-radius:50%/38%;
+    position:absolute; left:10%; right:10%; top:6%; bottom:6%;
+    border:2px solid rgba(255,255,255,.08); border-radius:44%/50%;
     background:radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.03), transparent 70%);
   }
+  /* two floor lines converging toward a vanishing point near the top (Red's far end),
+     reinforcing the runway-into-the-distance read of the vertical lane */
+  .ringFloor::before, .ringFloor::after{
+    content:""; position:absolute; top:2%; bottom:4%; width:1px;
+    background:linear-gradient(180deg, rgba(255,207,77,.28), rgba(255,207,77,.05) 70%, transparent);
+  }
+  .ringFloor::before{ left:0; transform-origin:bottom left; transform:rotate(7deg); }
+  .ringFloor::after{ right:0; transform-origin:bottom right; transform:rotate(-7deg); }
   .midline{ position:absolute; left:8%; right:8%; top:50%; height:1px; background:linear-gradient(90deg,transparent,rgba(255,207,77,.35),transparent); }
   #arena.shake{ animation:shake .3s; }
   @keyframes shake{
@@ -230,11 +238,39 @@
   .fighter.attack-kick .torsoG{ animation:kickTorso .38s ease-out; }
   .fighter.attack-kick .kickLines{ animation:kickLinesFade .38s ease-out; }
 
-  /* ---- Block: both arms raised to guard the face ---- */
-  .fighter.blocking .armFrontUpper{ transform:rotate(8deg); transition:transform .1s ease; }
-  .fighter.blocking .armFrontLower{ transform:rotate(6deg); transition:transform .1s ease; }
-  .fighter.blocking .armBackUpper{ transform:rotate(-6deg); transition:transform .1s ease; }
-  .fighter.blocking .armBackLower{ transform:rotate(-4deg); transition:transform .1s ease; }
+  /* ---- Bend: crouch low — bent knees, lowered torso, arms braced — dodges high
+     attacks and is the wind-up pose for a low sweep ---- */
+  .fighter.blocking .legFrontUpper{ transform:rotate(-16deg); transition:transform .12s ease; }
+  .fighter.blocking .legFrontLower{ transform:rotate(24deg); transition:transform .12s ease; }
+  .fighter.blocking .legBackUpper{ transform:rotate(12deg); transition:transform .12s ease; }
+  .fighter.blocking .legBackLower{ transform:rotate(-18deg); transition:transform .12s ease; }
+  .fighter.blocking .torsoG{ transform:translateY(6px) rotate(4deg); transition:transform .12s ease; }
+  .fighter.blocking .armFrontUpper{ transform:rotate(20deg); transition:transform .12s ease; }
+  .fighter.blocking .armBackUpper{ transform:rotate(-14deg); transition:transform .12s ease; }
+  .fighter.blocking .head{ transition:transform .12s ease; transform:translateY(5px); }
+
+  /* ---- Low sweep: triggered by kicking while bent — a wide low-line kick ---- */
+  @keyframes lowSweepThigh{
+    0%{ transform:rotate(-16deg); }
+    35%{ transform:rotate(-4deg); }
+    55%{ transform:rotate(-58deg); }
+    80%{ transform:rotate(-40deg); }
+    100%{ transform:rotate(-16deg); }
+  }
+  @keyframes lowSweepShin{
+    0%{ transform:rotate(24deg); }
+    35%{ transform:rotate(10deg); }
+    55%{ transform:rotate(-34deg); }
+    80%{ transform:rotate(-20deg); }
+    100%{ transform:rotate(24deg); }
+  }
+  .fighter.attack-lowkick .legFrontUpper{ animation:lowSweepThigh .4s cubic-bezier(.22,.85,.35,1); }
+  .fighter.attack-lowkick .legFrontLower{ animation:lowSweepShin .4s cubic-bezier(.22,.85,.35,1); }
+  .fighter.attack-lowkick .kickLines{ animation:kickLinesFade .4s ease-out; }
+  .fighter.attack-lowkick .torsoG{ transform:translateY(6px); }
+
+  /* ---- Aerial: jump-triggered strike gets a brief gold accent to read as a special hit ---- */
+  .fighter.aerial .rig{ filter:drop-shadow(0 0 12px var(--gold)) brightness(1.25); }
 
   /* ---- Dash: trailing speed-line streaks behind the runner ---- */
   .dashLines{ transition:opacity .1s; }
@@ -257,7 +293,7 @@
   @keyframes flutter{ 0%,100%{ transform:rotate(-6deg); } 50%{ transform:rotate(8deg); } }
 
   .shieldBadge{ position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:15px; opacity:0; transition:opacity .1s; z-index:2; }
-  .fighter.blocking .shieldBadge, .fighter.shielded .shieldBadge{ opacity:1; }
+  .fighter.shielded .shieldBadge{ opacity:1; }
 
   .impact{ position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:clamp(16px,4vw,24px); opacity:0; pointer-events:none; z-index:6; }
   .impact.show{ animation:pop .5s ease-out forwards; }
@@ -286,22 +322,38 @@
   #banner.show{ opacity:1; }
   #banner.taunt{ font-size:clamp(16px,4.4vw,26px); color:var(--gold); }
 
-  #overlay{
+  .screenOverlay{
     position:absolute; inset:0; background:rgba(10,8,14,.92); display:none; flex-direction:column;
-    align-items:center; justify-content:center; text-align:center; gap:12px; z-index:20; padding:16px;
+    align-items:center; justify-content:center; text-align:center; gap:12px; z-index:25; padding:16px;
   }
-  #overlay h2{ font-size:clamp(20px,6vw,32px); margin:0; letter-spacing:2px; }
-  .overlayBtns{ display:flex; gap:10px; }
+  .screenOverlay h2{ font-size:clamp(20px,6vw,32px); margin:0; letter-spacing:2px; }
+  .overlayBtns{ display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
   .overlayBtns button{
     border:none; color:#fff; font-weight:bold; padding:11px 20px; border-radius:26px; cursor:pointer;
     font-size:13px; letter-spacing:.5px; box-shadow:0 4px 14px rgba(0,0,0,.4);
   }
-  #restartBtn{ background:linear-gradient(90deg,var(--blue),var(--red)); }
-  #changeBtn{ background:#3a2a3f; }
+  #restartBtn, #resumeBtn{ background:linear-gradient(90deg,var(--blue),var(--red)); }
+  #changeBtn, #pauseExitBtn{ background:#3a2a3f; }
+  #pauseRestartBtn{ background:#4a3a20; }
+
+  #pauseBtn{
+    position:absolute; top:8px; left:50%; transform:translateX(-50%); z-index:18;
+    width:34px; height:28px; border:1px solid rgba(255,255,255,.25); border-radius:8px;
+    background:rgba(20,15,24,.55); color:#f4ecff; font-size:11px; letter-spacing:1px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; touch-action:none;
+  }
+  #pauseBtn:active{ background:rgba(20,15,24,.85); }
 
   /* ---------- Controls: joystick + action cluster ---------- */
   .controlZone{ display:flex; align-items:center; justify-content:space-between; padding:6px 10px; flex-shrink:0; gap:8px; }
   .controlZone.top{ transform:rotate(180deg); }
+  /* 1P vs CPU: only one control zone remains, so give it the standard mobile-game
+     layout — joystick bottom-left, action buttons bottom-right, roomier targets —
+     instead of the face-to-face convention that only matters with a second player. */
+  .controlZone.solo{ justify-content:space-between; padding:8px 18px; }
+  .controlZone.solo .joyBase{ width:clamp(84px,24vw,112px); height:clamp(84px,24vw,112px); }
+  .controlZone.solo .actionCluster{ width:clamp(150px,44vw,220px); }
+  .controlZone.solo .actionCluster button{ height:clamp(36px,9.5vw,48px); }
 
   .joyBase{
     position:relative; width:clamp(72px,20vw,96px); height:clamp(72px,20vw,96px); border-radius:50%;
@@ -355,7 +407,7 @@
       <div class="charGrid" id="redCharGrid"></div>
     </div>
     <button id="fightBtn">FIGHT!</button>
-    <div class="hint">Best of 3 rounds &middot; Joystick to move &amp; dodge (double-tap a direction to dash) &middot; Grab power-ups at ring center &middot; Specials: Jump→Kick→Kick (Rising Kick) &middot; Punch→Punch→Kick (Rush Combo)</div>
+    <div class="hint">Best of 3 rounds &middot; Joystick: front/back to close or retreat, strafe to sidestep (double-tap a direction to dash) &middot; JUMP clears low sweeps &amp; adds an aerial strike &middot; BEND dodges high attacks &amp; turns KICK into a low sweep &middot; Grab power-ups at ring center &middot; Specials: Jump→Kick→Kick (Rising Kick) &middot; Punch→Punch→Kick (Rush Combo) &middot; Pause anytime from the ❚❚ button</div>
   </div>
 </div>
 
@@ -366,7 +418,7 @@
     <div class="actionCluster red-actions">
       <button class="btnJump" data-key="redJump">⤒ JUMP</button>
       <button class="btnPunch" data-key="redPunch">PUNCH</button>
-      <button class="btnBlockAction" data-key="redBlock">🛡</button>
+      <button class="btnBlockAction" data-key="redBlock">⬇ BEND</button>
       <button class="btnKick" data-key="redKick">KICK</button>
     </div>
   </div>
@@ -424,17 +476,28 @@
 
           <div id="banner"></div>
 
-          <div id="overlay">
+          <button id="pauseBtn" aria-label="Pause">❚❚</button>
+
+          <div id="overlay" class="screenOverlay">
             <h2 id="resultText">Winner!</h2>
             <div class="overlayBtns">
               <button id="restartBtn">Rematch</button>
               <button id="changeBtn">Change Fighters</button>
             </div>
           </div>
+
+          <div id="pauseOverlay" class="screenOverlay">
+            <h2>Paused</h2>
+            <div class="overlayBtns">
+              <button id="resumeBtn">Resume</button>
+              <button id="pauseRestartBtn">Restart Match</button>
+              <button id="pauseExitBtn">Exit to Select</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="footHint">Blue: WASD move · S punch · X kick · C block · double-tap a direction to dash &nbsp;|&nbsp; Red: arrows move · / punch · . kick · , block</div>
+    <div class="footHint">Blue: W/S front-back · A/D strafe · S punch · X kick · C bend · double-tap a direction to dash &nbsp;|&nbsp; Red: ↑/↓ front-back · ←/→ strafe · / punch · . kick · , bend</div>
   </div>
 
   <div class="controlZone" id="blueControlZone">
@@ -443,7 +506,7 @@
     <div class="actionCluster blue-actions">
       <button class="btnJump" data-key="blueJump">⤒ JUMP</button>
       <button class="btnPunch" data-key="bluePunch">PUNCH</button>
-      <button class="btnBlockAction" data-key="blueBlock">🛡</button>
+      <button class="btnBlockAction" data-key="blueBlock">⬇ BEND</button>
       <button class="btnKick" data-key="blueKick">KICK</button>
     </div>
   </div>
@@ -506,7 +569,21 @@
   // Jointed stick-figure rig: 2-segment arms/legs (upper+lower), boxer guard rest pose.
   // Nested groups so lower-segment rotation pivots correctly with the parent upper-segment.
   function fighterSVGMarkup(ch){
-    const tw = 3.5*ch.torsoScale; // torso "thickness" via stroke-width only, kept slim for stick-figure look
+    const ts = ch.torsoScale;
+    // Body reads as ONE figure via three fixes: (1) only two body tones total —
+    // a back tone (limbs behind the torso) and the main tone (front limbs + torso),
+    // instead of a different shade per segment; (2) a filled joint circle at every
+    // shoulder/elbow/hip/knee that sits on top of both meeting segments, welding them
+    // together instead of leaving a seam; (3) a flared torso silhouette (wide at the
+    // shoulders/hips, narrower at the waist) instead of a uniform straight rod, so limbs
+    // visibly grow out of a body mass rather than being taped onto a stick.
+    const back = shade(ch.color,-30);
+    const main = ch.color;
+    const jointBack = back, jointMain = main;
+    // torso silhouette coords (viewBox units), scaled by ts around the spine at x=30
+    const shW=6.5*ts, waistW=4*ts, hipW=5.8*ts;
+    const torsoPath = `M${30-shW},27 Q${30-shW-1.5},38 ${30-waistW},45 Q${30-hipW+0.5},52 ${30-hipW},58 `+
+      `L${30+hipW},58 Q${30+hipW-0.5},52 ${30+waistW},45 Q${30+shW+1.5},38 ${30+shW},27 Z`;
     return `<svg class="rig" viewBox="0 0 60 100">
       <g class="motionLines kickLines" opacity="0">
         <path d="M46,80 L56,76" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
@@ -514,31 +591,41 @@
         <path d="M44,92 L55,93" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
       </g>
 
-      <g class="legBackUpper"><path d="M30,58 L24,75" stroke="${ch.color}" stroke-width="7.5" stroke-linecap="round"/>
-        <g class="legBackLower"><path d="M24,75 L19,96" stroke="${shade(ch.color,14)}" stroke-width="7" stroke-linecap="round"/></g>
+      <g class="legBackUpper"><path d="M30,58 L24,75" stroke="${back}" stroke-width="7.5" stroke-linecap="round"/>
+        <circle cx="30" cy="58" r="4.2" fill="${jointBack}"/>
+        <g class="legBackLower"><path d="M24,75 L19,96" stroke="${back}" stroke-width="7" stroke-linecap="round"/>
+          <circle cx="24" cy="75" r="3.6" fill="${jointBack}"/>
+        </g>
       </g>
-      <g class="legFrontUpper"><path d="M30,58 L37,75" stroke="${shade(ch.color,10)}" stroke-width="7.5" stroke-linecap="round"/>
-        <g class="legFrontLower"><path d="M37,75 L42,96" stroke="${shade(ch.color,24)}" stroke-width="7" stroke-linecap="round"/>${ch.accessory==='wristbands' ? `<rect x="37.5" y="88" width="9" height="5" rx="1.5" fill="${ch.accent}"/>` : ''}</g>
+      <g class="legFrontUpper"><path d="M30,58 L37,75" stroke="${main}" stroke-width="7.8" stroke-linecap="round"/>
+        <g class="legFrontLower"><path d="M37,75 L42,96" stroke="${main}" stroke-width="7.2" stroke-linecap="round"/>
+          <circle cx="37" cy="75" r="3.8" fill="${jointMain}"/>${ch.accessory==='wristbands' ? `<rect x="37.5" y="88" width="9" height="5" rx="1.5" fill="${ch.accent}"/>` : ''}</g>
       </g>
 
-      <g class="torsoG"><path d="M30,26 L30,58" stroke="${ch.color}" stroke-width="${11*ch.torsoScale}" stroke-linecap="round"/></g>
+      <g class="torsoG"><path d="${torsoPath}" fill="${main}"/></g>
+      <rect x="27" y="22" width="6" height="6" rx="2.5" fill="${main}"/>
 
-      <g class="armBackUpper"><path d="M30,27 L23,42" stroke="${shade(ch.color,-14)}" stroke-width="6.5" stroke-linecap="round"/>
-        <g class="armBackLower"><path d="M23,42 L19,29" stroke="${shade(ch.color,-20)}" stroke-width="6" stroke-linecap="round"/></g>
+      <g class="armBackUpper"><path d="M30,27 L23,42" stroke="${back}" stroke-width="6.5" stroke-linecap="round"/>
+        <circle cx="30" cy="27" r="3.6" fill="${jointBack}"/>
+        <g class="armBackLower"><path d="M23,42 L19,29" stroke="${back}" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="23" cy="42" r="3.1" fill="${jointBack}"/>
+        </g>
       </g>
 
       <circle class="head" cx="30" cy="15" r="9" fill="${ch.skin}"/>
       ${faceSVG(ch)}
       ${accessorySVG(ch)}
 
-      <g class="armFrontUpper"><path d="M30,27 L37,42" stroke="${ch.accent}" stroke-width="6.5" stroke-linecap="round"/>
+      <g class="armFrontUpper"><path d="M30,27 L37,42" stroke="${main}" stroke-width="6.8" stroke-linecap="round"/>
+        <circle cx="30" cy="27" r="3.9" fill="${jointMain}"/>
         <g class="armFrontLower">
           <g class="motionLines punchLines" opacity="0">
             <path d="M46,25 L57,22" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
             <path d="M45,31 L57,31" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
             <path d="M45,37 L56,40" stroke="${ch.accent}" stroke-width="2" stroke-linecap="round"/>
           </g>
-          <path d="M37,42 L41,29" stroke="${ch.accent}" stroke-width="6" stroke-linecap="round"/>${ch.accessory==='gloves' ? `<circle cx="41" cy="29" r="6.4" fill="#c0392b"/><circle cx="41" cy="29" r="6.4" fill="none" stroke="#7a1f1f" stroke-width="1"/>` : ''}
+          <path d="M37,42 L41,29" stroke="${main}" stroke-width="6.2" stroke-linecap="round"/>
+          <circle cx="37" cy="42" r="3.4" fill="${jointMain}"/>${ch.accessory==='gloves' ? `<circle cx="41" cy="29" r="6.4" fill="#c0392b"/><circle cx="41" cy="29" r="6.4" fill="none" stroke="#7a1f1f" stroke-width="1"/>` : ''}
         </g>
       </g>
 
@@ -569,6 +656,7 @@
   const fightBtn = document.getElementById('fightBtn');
   const modeBtns = document.querySelectorAll('.modeBtn');
   const redControlZone = document.getElementById('redControlZone');
+  const blueControlZone = document.getElementById('blueControlZone');
   const redCpuTag = document.getElementById('redCpuTag');
 
   const blueEl = document.getElementById('blue');
@@ -589,6 +677,11 @@
   const resultText = document.getElementById('resultText');
   const restartBtn = document.getElementById('restartBtn');
   const changeBtn = document.getElementById('changeBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const pauseOverlay = document.getElementById('pauseOverlay');
+  const resumeBtn = document.getElementById('resumeBtn');
+  const pauseRestartBtn = document.getElementById('pauseRestartBtn');
+  const pauseExitBtn = document.getElementById('pauseExitBtn');
 
   // ================= Constants =================
   const MOVE_SPEED = 0.62;        // % of arena per frame-ish (x axis, 0-100 scale)
@@ -730,8 +823,11 @@
     const s = ch.stats || {};
     return {
       charKey, ch,
-      // shared 2D ring coords: x 0-100 (left-right), y 0-100 (up/down dodge + depth-scale axis)
-      x: homeSide==='blue' ? 26 : 74, y: 50,
+      // shared 2D ring coords: y 0-100 is now the PRIMARY front/back approach axis running
+      // the long (portrait) side of the screen — Blue's own end is near y=100 (screen-near/
+      // bottom, renders bigger), Red's own end is near y=0 (screen-far/top, renders smaller).
+      // x 0-100 is a narrow left/right strafe band around the center lane (see X_MIN/X_MAX).
+      x: 50, y: homeSide==='blue' ? 82 : 18,
       health: MAX_HEALTH * (s.health||1),
       maxHealth: MAX_HEALTH * (s.health||1),
       hits:0, combo:0, lastHitTime:-99999,
@@ -750,24 +846,28 @@
   }
 
   // ================= Input: keyboard (desktop testing) =================
+  // Movement and actions now use fully separate keys (front/back is the primary axis,
+  // so it needed its own dedicated key rather than doubling up with an attack button).
   const keyDown = {};
   const keyMap = {
-    'a':'blueLeft','A':'blueLeft','d':'blueRight','D':'blueRight','w':'blueForward','W':'blueForward','s2':'blueBack',
+    'a':'blueLeft','A':'blueLeft','d':'blueRight','D':'blueRight','w':'blueForward','W':'blueForward',
+    's':'blueBack','S':'blueBack',
     'ArrowLeft':'redLeft','ArrowRight':'redRight','ArrowUp':'redForward','ArrowDown':'redBack'
   };
   const keyAction = {
-    's':'bluePunch','S':'bluePunch','x':'blueKick','X':'blueKick','c':'blueBlock','C':'blueBlock',
+    'j':'bluePunch','J':'bluePunch','k':'blueKick','K':'blueKick','l':'blueBlock','L':'blueBlock',
     '/':'redPunch','.':'redKick',',':'redBlock'
   };
+  const keyJump = { ' ':'blueJump', "'":'redJump' };
   document.addEventListener('keydown', e=>{
     if(keyMap[e.key]){ keyDown[keyMap[e.key]] = true; e.preventDefault(); }
     if(keyAction[e.key]){ input[keyAction[e.key]] = true; e.preventDefault(); }
-    if(e.key===' '){ keyDown['blueJumpKey']=true; }
+    if(keyJump[e.key]){ input[keyJump[e.key]] = true; e.preventDefault(); }
   });
   document.addEventListener('keyup', e=>{
     if(keyMap[e.key]){ keyDown[keyMap[e.key]] = false; }
     if(keyAction[e.key]){ input[keyAction[e.key]] = false; }
-    if(e.key===' '){ keyDown['blueJumpKey']=false; }
+    if(keyJump[e.key]){ input[keyJump[e.key]] = false; }
   });
 
   function keyboardJoyOverride(){
@@ -877,17 +977,34 @@
     mountRig(redEl, redKey);
     redControlZone.style.display = (mode==='ai') ? 'none' : 'flex';
     redCpuTag.style.display = (mode==='ai') ? 'inline' : 'none';
+    blueControlZone.classList.toggle('solo', mode==='ai');
     initMatch();
   });
 
   restartBtn.addEventListener('click', ()=>{ overlay.style.display='none'; initMatch(); });
   changeBtn.addEventListener('click', backToSelect);
 
+  function openPause(){
+    if(state.matchOver || !state.roundActive) return;
+    state.paused = true;
+    pauseOverlay.style.display = 'flex';
+  }
+  function closePause(){
+    state.paused = false;
+    pauseOverlay.style.display = 'none';
+  }
+  pauseBtn.addEventListener('click', openPause);
+  resumeBtn.addEventListener('click', closePause);
+  pauseRestartBtn.addEventListener('click', ()=>{ pauseOverlay.style.display='none'; initMatch(); });
+  pauseExitBtn.addEventListener('click', ()=>{ pauseOverlay.style.display='none'; backToSelect(); });
+
   function backToSelect(){
     state.matchOver = true;
+    state.paused = false;
     if(timerInterval) clearInterval(timerInterval);
     if(loopId) cancelAnimationFrame(loopId);
     overlay.style.display = 'none';
+    pauseOverlay.style.display = 'none';
     gameScreen.style.display = 'none';
     selectScreen.style.display = 'flex';
   }
@@ -895,17 +1012,18 @@
   // ================= Match / round flow =================
   function initMatch(){
     state = {
-      round:1, blueRoundWins:0, redRoundWins:0, matchOver:false, roundActive:false,
+      round:1, blueRoundWins:0, redRoundWins:0, matchOver:false, roundActive:false, paused:false,
       blue:newFighter(blueKey,'blue'), red:newFighter(redKey,'red'), powerup:null, aiNextDecision:0
     };
     Object.keys(input).forEach(k=>input[k]=false);
     joy.blue.x=joy.blue.y=joy.red.x=joy.red.y=0;
     updateRoundDots();
     overlay.style.display = 'none';
+    pauseOverlay.style.display = 'none';
 
     if(timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(()=>{
-      if(!state.roundActive || state.matchOver) return;
+      if(!state.roundActive || state.matchOver || state.paused) return;
       state.roundTime--;
       timerEl.textContent = Math.max(0, state.roundTime);
       if(state.roundTime<=0) endRound('time');
@@ -1005,38 +1123,52 @@
   }
 
   // ================= World -> screen projection (2.5D fake depth) =================
-  // Shared free-roam ring plane: x 0-100 (left-right), y 0-100 (up/down).
-  // Lower y-on-screen (larger y value) = closer to camera = bigger, classic belt-scroller depth trick.
-  const Y_MIN = 8, Y_MAX = 92;
+  // The ring now runs the LONG (portrait) side of the screen: y 0-100 is the shared
+  // front/back approach lane (Red's own end near y=0/top, Blue's own end near y=100/
+  // bottom). Larger y = nearer the bottom = nearer an implied ringside camera = bigger,
+  // smaller y = deeper into the ring = smaller — a real vanishing-point runway instead
+  // of the old flat same-scale layout. x 0-100 is a narrow strafe band either side of
+  // the center lane, purely lateral, no scale effect.
+  const Y_MIN = 6, Y_MAX = 94;
   function positionFighters(){
     layoutFighter(blueEl, state.blue, state.red, false);
     layoutFighter(redEl, state.red, state.blue, true);
   }
   function layoutFighter(el, f, opponent, isRed){
-    const topPct = 12 + (f.y/100)*68;      // map to arena vertical band 12%..80%
-    const scale = 0.8 + (f.y/100)*0.34;    // lower on screen = bigger/closer
+    const topPct = 8 + (f.y/100)*80;        // map to arena vertical band 8%..88%
+    const scale = 0.62 + (f.y/100)*0.62;    // lower on screen = bigger/closer — the runway effect
     el.style.left = f.x + '%';
     el.style.top = topPct + '%';
     const facesRight = f.x <= opponent.x;
-    el.style.transform = `translate(-50%,-60%) scale(${scale.toFixed(3)})`;
+    el.style.transform = `translate(-50%,-62%) scale(${scale.toFixed(3)})`;
     const rig = el.querySelector('.rig');
     if(rig) rig.style.transform = `scaleX(${facesRight ? 1 : -1})`;
-    // True z-axis "coming out of the screen" tilt via 3D perspective + rotateY (turning
-    // around the vertical axis, which foreshortens the silhouette), NOT a flat 2D rotate
-    // (which just looks like bending sideways). Both fighters turn toward ring center,
-    // more pronounced the closer/bigger (deeper) they are, for extra depth/dynamism.
-    const tiltMag = 8 + (f.y/100)*10;
+    // Subtle z-axis "coming out of the screen" tilt via 3D perspective + rotateY, turning
+    // each fighter slightly toward the center lane — more pronounced the closer/bigger
+    // (deeper into their own foreground) they are, for extra dimensional feel.
+    const tiltMag = 6 + (f.y/100)*9;
     const tiltSign = isRed ? -1 : 1;
     const tilt = el.querySelector('.tiltWrap');
     if(tilt) tilt.style.transform = `perspective(600px) rotateY(${tiltSign*tiltMag}deg)`;
-    el.style.zIndex = Math.round(topPct);
+    el.style.zIndex = Math.round(f.y);
   }
 
   // ================= Collision / bounds =================
-  const X_MIN = 5, X_MAX = 95;
+  const X_MIN = 32, X_MAX = 68;   // narrow strafe band around the center lane
+  const MIN_GAP = 12;             // minimum front/back distance the fighters can close to
   function clampFighter(f){
     f.x = Math.max(X_MIN, Math.min(X_MAX, f.x));
     f.y = Math.max(Y_MIN, Math.min(Y_MAX, f.y));
+  }
+  // Blue is always the higher-y (near) fighter, Red the lower-y (far) fighter — they can
+  // never pass through one another along the approach lane.
+  function resolveRingGap(){
+    const gap = state.blue.y - state.red.y;
+    if(gap < MIN_GAP){
+      const push = (MIN_GAP - gap)/2;
+      state.blue.y = Math.min(Y_MAX, state.blue.y + push);
+      state.red.y = Math.max(Y_MIN, state.red.y - push);
+    }
   }
 
   function tryJump(el, fighter){
@@ -1062,17 +1194,21 @@
     return Math.sqrt(dx*dx + dy*dy);
   }
 
-  function attemptAttack(att, atkEl, atkSide, def, defEl, defSide, defImpactEl, type, isBlue){
+  // variant: 'standard' | 'low' (bend+kick sweep) | 'aerial' (jump+punch/kick)
+  function attemptAttack(att, atkEl, atkSide, def, defEl, defSide, defImpactEl, type, isBlue, variant){
+    variant = variant || 'standard';
     const cdKey = type==='punch' ? 'cooldownPunch' : 'cooldownKick';
     if(att[cdKey] > 0) return;
     const s = att.ch.stats;
     const cdMult = (s.cooldownMult||1) * (type==='punch' ? (s.punchCooldownMult||1) : 1);
-    att[cdKey] = (type==='punch' ? PUNCH_COOLDOWN : KICK_COOLDOWN) * cdMult;
-    const cls = 'attack-'+type;
-    atkEl.classList.remove(cls); void atkEl.offsetWidth; atkEl.classList.add(cls); // force restart on rapid re-attacks
-    setTimeout(()=>atkEl.classList.remove(cls), type==='punch'?340:380);
+    att[cdKey] = (type==='punch' ? PUNCH_COOLDOWN : KICK_COOLDOWN) * cdMult * (variant==='low' ? 1.15 : 1);
+    const cls = variant==='low' ? 'attack-lowkick' : variant==='aerial' ? 'attack-'+type+' aerial' : 'attack-'+type;
+    atkEl.classList.remove('attack-punch','attack-kick','attack-lowkick','aerial');
+    void atkEl.offsetWidth;
+    cls.split(' ').forEach(c=>atkEl.classList.add(c)); // force restart on rapid re-attacks
+    setTimeout(()=>{ atkEl.classList.remove('attack-punch','attack-kick','attack-lowkick','aerial'); }, type==='punch'?340:380);
 
-    const range = type==='punch' ? PUNCH_RANGE : KICK_RANGE;
+    const range = (type==='punch' ? PUNCH_RANGE : KICK_RANGE) + (variant==='low' ? -2 : 0);
     const dist = fighterDistance(att, def);
     if(dist > range) return;
 
@@ -1084,18 +1220,30 @@
 
     let dmg = type==='punch' ? PUNCH_DMG : KICK_DMG;
     dmg *= (type==='punch' ? (s.punchDmg||1) : (s.kickDmg||1)) * (s.dmgAll||1);
+    if(variant==='low') dmg *= 0.85;
+    if(variant==='aerial') dmg *= 1.2;
     dmg += Math.min(att.combo-1, 5) * 2;
     if(now < att.damageBoostUntil) dmg *= 2;
+
+    // Position-based dodging: ducking slips a standing high attack entirely, but a
+    // ducked opponent is still at the same level as an incoming low sweep. Jumping
+    // clears a low sweep entirely, but doesn't avoid a normal/aerial strike.
+    let dodged = false;
+    if(def.blocking && variant!=='low') dodged = true;                 // bent under a high attack
+    if(def.jumping && variant==='low') dodged = true;                  // hopped over a sweep
+
+    if(dodged){
+      defImpactEl.textContent = '💨';
+      defImpactEl.classList.remove('show'); void defImpactEl.offsetWidth; defImpactEl.classList.add('show');
+      return;
+    }
 
     if(def.shielded){
       dmg = 0;
       def.shielded = false;
       defEl.classList.remove('shielded');
       playSound('block');
-    } else if(def.blocking){
-      dmg *= (1-BLOCK_REDUCTION);
-      playSound('block');
-    } else if(type==='kick'){
+    } else if(type==='kick' || variant==='low'){
       playSound('kick');
       shakeArena();
     } else {
@@ -1105,13 +1253,13 @@
     def.health = Math.max(0, def.health - dmg);
     att.hits++;
 
-    let kb = (type==='punch' ? PUNCH_KNOCKBACK : KICK_KNOCKBACK) * (att.ch.stats.knockback||1);
-    if(def.blocking) kb *= 0.3;
-    def.x += isBlue ? kb : -kb;
+    let kb = (type==='punch' ? PUNCH_KNOCKBACK : KICK_KNOCKBACK) * (att.ch.stats.knockback||1) * (variant==='aerial'?1.4:1);
+    // knockback pushes the defender away from the attacker along the front/back lane
+    def.y += isBlue ? -kb : kb;
     clampFighter(def);
 
     defEl.classList.add('hitflash');
-    defImpactEl.textContent = type==='kick' ? '💥' : '✨';
+    defImpactEl.textContent = variant==='low' ? '🌀' : variant==='aerial' ? '⭐' : type==='kick' ? '💥' : '✨';
     defImpactEl.classList.remove('show'); void defImpactEl.offsetWidth; defImpactEl.classList.add('show');
     setTimeout(()=>defEl.classList.remove('hitflash'), 260);
 
@@ -1282,17 +1430,40 @@
 
     const r = Math.random();
     input.redPunch = false; input.redKick = false; input.redBlock = false; input.redJump = false;
-    if(dist <= KICK_RANGE+2 && r<0.32) input.redKick = true;
-    else if(dist <= PUNCH_RANGE+2 && r<0.55) input.redPunch = true;
-    if(r>0.88 && dist < PUNCH_RANGE+4) input.redBlock = true;
-    if(Math.random()<0.04) input.redJump = true;
+    const inRange = dist <= KICK_RANGE+2;
+    if(inRange && r<0.14){
+      // bend into a low sweep
+      input.redBlock = true; input.redKick = true;
+    } else if(inRange && r<0.40){
+      input.redKick = true;
+    } else if(dist <= PUNCH_RANGE+2 && r<0.6){
+      input.redPunch = true;
+    } else if(r>0.9 && dist < PUNCH_RANGE+4){
+      input.redBlock = true; // plain dodge, no follow-up
+    }
+    if(Math.random()<0.05){
+      input.redJump = true;
+      if(inRange) input.redKick = true; // occasional jump attack
+    }
     if(Math.random()<0.03) triggerDash('red', {x:jx||0, y:jy||-1});
   }
 
   // ================= Main loop =================
+  function throwAttacks(f, el, side, opp, oppEl, oppSide, oppImpactEl, isBlue){
+    const p = input[side+'Punch'], k = input[side+'Kick'];
+    if(f.blocking){
+      // bent down: no punch option, but kick becomes a low sweep
+      if(k) attemptAttack(f, el, side, opp, oppEl, oppSide, oppImpactEl, 'kick', isBlue, 'low');
+      return;
+    }
+    const variant = f.jumping ? 'aerial' : 'standard';
+    if(p) attemptAttack(f, el, side, opp, oppEl, oppSide, oppImpactEl, 'punch', isBlue, variant);
+    if(k) attemptAttack(f, el, side, opp, oppEl, oppSide, oppImpactEl, 'kick', isBlue, variant);
+  }
+
   function loop(){
     if(state.matchOver){ loopId = requestAnimationFrame(loop); return; }
-    if(state.roundActive){
+    if(state.roundActive && !state.paused){
       const now = performance.now();
       keyboardJoyOverride();
 
@@ -1311,19 +1482,14 @@
 
       clampFighter(state.blue);
       clampFighter(state.red);
+      resolveRingGap();
       positionFighters();
 
       if(input.blueJump) tryJump(blueEl, state.blue);
       if(input.redJump) tryJump(redEl, state.red);
 
-      if(!state.blue.blocking){
-        if(input.bluePunch) attemptAttack(state.blue, blueEl, 'blue', state.red, redEl, 'red', impactRed, 'punch', true);
-        if(input.blueKick) attemptAttack(state.blue, blueEl, 'blue', state.red, redEl, 'red', impactRed, 'kick', true);
-      }
-      if(!state.red.blocking){
-        if(input.redPunch) attemptAttack(state.red, redEl, 'red', state.blue, blueEl, 'blue', impactBlue, 'punch', false);
-        if(input.redKick) attemptAttack(state.red, redEl, 'red', state.blue, blueEl, 'blue', impactBlue, 'kick', false);
-      }
+      throwAttacks(state.blue, blueEl, 'blue', state.red, redEl, 'red', impactRed, true);
+      throwAttacks(state.red, redEl, 'red', state.blue, blueEl, 'blue', impactBlue, false);
 
       if(state.blue.cooldownPunch>0) state.blue.cooldownPunch -= 16;
       if(state.blue.cooldownKick>0) state.blue.cooldownKick -= 16;
@@ -1338,14 +1504,15 @@
     loopId = requestAnimationFrame(loop);
   }
 
-  // Joystick maps directly to the shared ring plane: pushing up moves the fighter up
-  // on screen (y decreases), pushing right moves them right (x increases) — same for
-  // both players, since raw pointer coordinates already account for Red's rotated pad.
-  // X = closing/opening distance with the opponent. Y = sidestep/dodge axis.
+  // Joystick maps directly to the shared ring plane: pushing the stick forward/back
+  // (physical up/down) drives y — the primary front/back approach lane running the long
+  // side of the screen. Pushing left/right drives x — a narrow strafe band. Both work
+  // identically for Blue and Red since Red's whole control zone is already rotated 180°,
+  // so "forward" always means "toward the opponent" for whoever is pushing the stick.
   function moveFighter(f, side, now){
     const j = joy[side];
     const speedMult = (f.ch.stats.speed||1) * (now < f.speedBoostUntil ? 1.6 : 1);
-    const blocking = f.blocking;
+    const bending = f.blocking;
     const dashing = now < f.dashUntil;
 
     if(dashing){
@@ -1354,12 +1521,12 @@
       f.y += f.dashDir.y * 2.6 * dashMult;
       return;
     }
-    if(blocking){
-      // sidestep dodging allowed while blocking, but can't advance/retreat
-      f.y += j.y * MOVE_SPEED * speedMult;
+    if(bending){
+      // ducked down: can still strafe sideways, but can't advance or retreat
+      f.x += j.x * MOVE_SPEED * speedMult;
       return;
     }
-    f.x += j.x * MOVE_SPEED * speedMult;
+    f.x += j.x * MOVE_SPEED * speedMult * 0.7;   // strafe is deliberately a bit slower than approach
     f.y += j.y * MOVE_SPEED * speedMult;
   }
 
