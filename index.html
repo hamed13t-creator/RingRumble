@@ -27,10 +27,6 @@
   }
   button{ font-family:inherit; }
 
-  /* Portrait lock fallback: if the OS/browser reports landscape (e.g. Screen Orientation
-     Lock API isn't available, such as on iOS Safari), force-rotate the whole page back so
-     it always renders upright in portrait regardless of physical phone orientation. This
-     stops a flipped phone from swapping which player's controls appear where. */
   @media screen and (orientation:landscape){
     html{
       width:100vh; height:100vw;
@@ -89,7 +85,6 @@
 
   /* ---------- Game Screen ---------- */
   #gameScreen{ height:100%; display:none; flex-direction:column; }
-
   #midWrap{ flex:1; min-height:0; display:flex; flex-direction:column; padding:0 6px; }
 
   h1.title{
@@ -112,7 +107,7 @@
   .redFill{ background:linear-gradient(90deg,var(--red),#9c1212); }
   #timer{ font-size:clamp(15px,4vw,22px); font-weight:900; color:var(--gold); min-width:40px; text-align:center; font-variant-numeric:tabular-nums; text-shadow:0 0 10px rgba(255,207,77,.6); }
 
-  /* ---------- Arena (2.5D isometric-ish ring) ---------- */
+  /* ---------- Arena ---------- */
   #arenaRow{ flex:1; min-height:0; display:flex; align-items:stretch; gap:6px; }
   #arenaOuter{ position:relative; flex:1; min-height:0; }
   #arena{
@@ -123,14 +118,11 @@
       linear-gradient(#1c1420,#241a2a 45%,#2a1f2c 55%,#1c1420);
     box-shadow:inset 0 0 50px rgba(0,0,0,.65);
   }
-  /* diagonal ring guide lines to sell the ring/perspective */
   .ringFloor{
     position:absolute; left:10%; right:10%; top:6%; bottom:6%;
     border:2px solid rgba(255,255,255,.08); border-radius:44%/50%;
     background:radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.03), transparent 70%);
   }
-  /* two floor lines converging toward a vanishing point near the top (Red's far end),
-     reinforcing the runway-into-the-distance read of the vertical lane */
   .ringFloor::before, .ringFloor::after{
     content:""; position:absolute; top:2%; bottom:4%; width:1px;
     background:linear-gradient(180deg, rgba(255,207,77,.28), rgba(255,207,77,.05) 70%, transparent);
@@ -138,13 +130,16 @@
   .ringFloor::before{ left:0; transform-origin:bottom left; transform:rotate(7deg); }
   .ringFloor::after{ right:0; transform-origin:bottom right; transform:rotate(-7deg); }
   .midline{ position:absolute; left:8%; right:8%; top:50%; height:1px; background:linear-gradient(90deg,transparent,rgba(255,207,77,.35),transparent); }
-  #arena.shake{ animation:shake .3s; }
+
+  #arena.shake{ animation:shake .34s cubic-bezier(.36,.07,.19,.97); }
   @keyframes shake{
-    0%,100%{ transform:translate(0,0); }
-    20%{ transform:translate(-6px,2px); }
-    40%{ transform:translate(6px,-2px); }
-    60%{ transform:translate(-4px,3px); }
-    80%{ transform:translate(4px,-1px); }
+    0%,100%{ transform:translate(0,0) rotate(0deg); }
+    10%{ transform:translate(calc(-9px * var(--shakeMag,1)), calc(4px * var(--shakeMag,1))) rotate(calc(-0.6deg * var(--shakeMag,1))); }
+    25%{ transform:translate(calc(10px * var(--shakeMag,1)), calc(-5px * var(--shakeMag,1))) rotate(calc(0.7deg * var(--shakeMag,1))); }
+    40%{ transform:translate(calc(-8px * var(--shakeMag,1)), calc(6px * var(--shakeMag,1))) rotate(calc(-0.5deg * var(--shakeMag,1))); }
+    55%{ transform:translate(calc(7px * var(--shakeMag,1)), calc(-4px * var(--shakeMag,1))) rotate(calc(0.4deg * var(--shakeMag,1))); }
+    70%{ transform:translate(calc(-5px * var(--shakeMag,1)), calc(3px * var(--shakeMag,1))) rotate(calc(-0.3deg * var(--shakeMag,1))); }
+    85%{ transform:translate(calc(3px * var(--shakeMag,1)), calc(-2px * var(--shakeMag,1))) rotate(calc(0.15deg * var(--shakeMag,1))); }
   }
   .floor{ position:absolute; left:0; right:0; bottom:0; height:8%; background:linear-gradient(#3a2a30,#241820); border-top:2px solid #4a3a44; }
 
@@ -158,9 +153,7 @@
   .fighter.red .platform{ background:radial-gradient(ellipse,rgba(255,59,59,.55),transparent 70%); }
 
   .rig{ width:100%; display:block; overflow:visible; filter:drop-shadow(0 4px 5px rgba(0,0,0,.5)); }
-  /* facing (left/right) is set dynamically in JS based on relative position, on the svg itself */
 
-  /* transform-origins for the jointed stick-figure rig, in shared viewBox coordinates */
   .armFrontUpper,.armBackUpper{ transform-origin:30px 27px; }
   .armFrontLower{ transform-origin:37px 42px; }
   .armBackLower{ transform-origin:23px 42px; }
@@ -170,76 +163,86 @@
   .torsoG{ transform-origin:30px 58px; }
   .motionLines{ transition:opacity .1s; }
 
+  /* ---- Idle breathing / block tension: alive whenever nothing transient owns rigWrap ---- */
+  @keyframes idleBreathe{
+    0%,100%{ transform:translateY(0) scale(1,1) rotate(0deg); }
+    50%{ transform:translateY(-1.5px) scale(1.015,0.985) rotate(0.6deg); }
+  }
+  .fighter:not(.jump):not(.attack-punch):not(.attack-kick):not(.attack-lowkick):not(.blocking):not(.dashing):not(.hitflash):not(.special):not(.sq-light):not(.sq-heavy):not(.sq-special):not(.sq-ko):not(.atk-surge):not(.planting):not(.recoilBack):not(.blockBrace) .rigWrap{
+    animation: idleBreathe 2.4s ease-in-out infinite;
+  }
+  @keyframes blockTension{
+    0%,100%{ transform:scale(1,1) translateY(0); }
+    50%{ transform:scale(1.02,0.985) translateY(1px); }
+  }
+  .fighter.blocking:not(.hitflash) .rigWrap{
+    animation: blockTension 1.6s ease-in-out infinite;
+  }
+
   .fighter.jump .rigWrap{ transform:translateY(-24px); }
   .fighter.jump .legFrontUpper{ transform:rotate(-38deg); }
   .fighter.jump .legFrontLower{ transform:rotate(48deg); }
   .fighter.jump .legBackUpper{ transform:rotate(30deg); }
   .fighter.jump .legBackLower{ transform:rotate(-42deg); }
 
-  /* ---- Punch: anticipation -> full-extension strike -> elastic recover ---- */
+  /* ---- Punch: extreme anticipation -> lightning snap -> elastic overshoot -> settle ---- */
   @keyframes punchUpper{
-    0%{ transform:rotate(0deg); }
-    14%{ transform:rotate(14deg); }
-    45%{ transform:rotate(-96deg); }
-    72%{ transform:rotate(-66deg); }
+    0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    16%{ transform:rotate(30deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    40%{ transform:rotate(-124deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    58%{ transform:rotate(-88deg); animation-timing-function:ease-out; }
     100%{ transform:rotate(0deg); }
   }
   @keyframes punchLower{
-    0%{ transform:rotate(0deg); }
-    14%{ transform:rotate(22deg); }
-    45%{ transform:rotate(-72deg); }
-    72%{ transform:rotate(-48deg); }
+    0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    16%{ transform:rotate(40deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    40%{ transform:rotate(-92deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    58%{ transform:rotate(-58deg); animation-timing-function:ease-out; }
     100%{ transform:rotate(0deg); }
   }
   @keyframes punchTorso{
-    0%,100%{ transform:rotate(0deg); }
-    45%{ transform:rotate(-9deg); }
-    72%{ transform:rotate(-3deg); }
+    0%,100%{ transform:rotate(0deg) translateX(0) scale(1,1); }
+    16%{ transform:rotate(6deg) translateX(-1.5px) scale(0.97,1.03); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    40%{ transform:rotate(-16deg) translateX(3px) scale(1.05,0.95); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    58%{ transform:rotate(-6deg) translateX(1px) scale(1,1); animation-timing-function:ease-out; }
   }
   @keyframes punchLinesFade{
-    0%,35%{ opacity:0; }
-    45%{ opacity:1; }
-    65%{ opacity:.4; }
-    80%,100%{ opacity:0; }
+    0%,30%{ opacity:0; } 40%{ opacity:1; } 60%{ opacity:.4; } 78%,100%{ opacity:0; }
   }
-  .fighter.attack-punch .armFrontUpper{ animation:punchUpper .34s cubic-bezier(.22,.85,.35,1); }
-  .fighter.attack-punch .armFrontLower{ animation:punchLower .34s cubic-bezier(.22,.85,.35,1); }
-  .fighter.attack-punch .torsoG{ animation:punchTorso .34s ease-out; }
-  .fighter.attack-punch .punchLines{ animation:punchLinesFade .34s ease-out; }
+  .fighter.attack-punch .armFrontUpper{ animation:punchUpper .30s linear; }
+  .fighter.attack-punch .armFrontLower{ animation:punchLower .30s linear; }
+  .fighter.attack-punch .torsoG{ animation:punchTorso .30s linear; }
+  .fighter.attack-punch .punchLines{ animation:punchLinesFade .30s ease-out; }
 
-  /* ---- Kick: knee chamber -> hard extension -> recoil ---- */
+  /* ---- Kick ---- */
   @keyframes kickThigh{
-    0%{ transform:rotate(0deg); }
-    16%{ transform:rotate(22deg); }
-    48%{ transform:rotate(-102deg); }
-    75%{ transform:rotate(-74deg); }
+    0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    18%{ transform:rotate(34deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    44%{ transform:rotate(-128deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    66%{ transform:rotate(-96deg); animation-timing-function:ease-out; }
     100%{ transform:rotate(0deg); }
   }
   @keyframes kickShin{
-    0%{ transform:rotate(0deg); }
-    16%{ transform:rotate(46deg); }
-    48%{ transform:rotate(-62deg); }
-    75%{ transform:rotate(-38deg); }
+    0%{ transform:rotate(0deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    18%{ transform:rotate(58deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    44%{ transform:rotate(-78deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    66%{ transform:rotate(-46deg); animation-timing-function:ease-out; }
     100%{ transform:rotate(0deg); }
   }
   @keyframes kickTorso{
-    0%,100%{ transform:rotate(0deg); }
-    48%{ transform:rotate(-11deg); }
-    75%{ transform:rotate(-4deg); }
+    0%,100%{ transform:rotate(0deg) translateX(0) scale(1,1); }
+    18%{ transform:rotate(8deg) translateX(-2px) scale(0.95,1.06); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    44%{ transform:rotate(-19deg) translateX(4px) scale(1.08,0.93); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    66%{ transform:rotate(-7deg) translateX(1px) scale(1,1); animation-timing-function:ease-out; }
   }
   @keyframes kickLinesFade{
-    0%,38%{ opacity:0; }
-    48%{ opacity:1; }
-    68%{ opacity:.4; }
-    82%,100%{ opacity:0; }
+    0%,34%{ opacity:0; } 44%{ opacity:1; } 64%{ opacity:.4; } 80%,100%{ opacity:0; }
   }
-  .fighter.attack-kick .legFrontUpper{ animation:kickThigh .38s cubic-bezier(.22,.85,.35,1); }
-  .fighter.attack-kick .legFrontLower{ animation:kickShin .38s cubic-bezier(.22,.85,.35,1); }
-  .fighter.attack-kick .torsoG{ animation:kickTorso .38s ease-out; }
-  .fighter.attack-kick .kickLines{ animation:kickLinesFade .38s ease-out; }
+  .fighter.attack-kick .legFrontUpper{ animation:kickThigh .34s linear; }
+  .fighter.attack-kick .legFrontLower{ animation:kickShin .34s linear; }
+  .fighter.attack-kick .torsoG{ animation:kickTorso .34s linear; }
+  .fighter.attack-kick .kickLines{ animation:kickLinesFade .34s ease-out; }
 
-  /* ---- Bend: crouch low — bent knees, lowered torso, arms braced — dodges high
-     attacks and is the wind-up pose for a low sweep ---- */
   .fighter.blocking .legFrontUpper{ transform:rotate(-16deg); transition:transform .12s ease; }
   .fighter.blocking .legFrontLower{ transform:rotate(24deg); transition:transform .12s ease; }
   .fighter.blocking .legBackUpper{ transform:rotate(12deg); transition:transform .12s ease; }
@@ -249,33 +252,35 @@
   .fighter.blocking .armBackUpper{ transform:rotate(-14deg); transition:transform .12s ease; }
   .fighter.blocking .head{ transition:transform .12s ease; transform:translateY(5px); }
 
-  /* ---- Low sweep: triggered by kicking while bent — a wide low-line kick ---- */
+  /* ---- Low sweep ---- */
   @keyframes lowSweepThigh{
-    0%{ transform:rotate(-16deg); }
-    35%{ transform:rotate(-4deg); }
-    55%{ transform:rotate(-58deg); }
-    80%{ transform:rotate(-40deg); }
+    0%{ transform:rotate(-16deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    30%{ transform:rotate(6deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    52%{ transform:rotate(-68deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    78%{ transform:rotate(-46deg); animation-timing-function:ease-out; }
     100%{ transform:rotate(-16deg); }
   }
   @keyframes lowSweepShin{
-    0%{ transform:rotate(24deg); }
-    35%{ transform:rotate(10deg); }
-    55%{ transform:rotate(-34deg); }
-    80%{ transform:rotate(-20deg); }
+    0%{ transform:rotate(24deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    30%{ transform:rotate(4deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    52%{ transform:rotate(-42deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    78%{ transform:rotate(-24deg); animation-timing-function:ease-out; }
     100%{ transform:rotate(24deg); }
   }
-  .fighter.attack-lowkick .legFrontUpper{ animation:lowSweepThigh .4s cubic-bezier(.22,.85,.35,1); }
-  .fighter.attack-lowkick .legFrontLower{ animation:lowSweepShin .4s cubic-bezier(.22,.85,.35,1); }
-  .fighter.attack-lowkick .kickLines{ animation:kickLinesFade .4s ease-out; }
-  .fighter.attack-lowkick .torsoG{ transform:translateY(6px); }
+  @keyframes lowSweepTorso{
+    0%,100%{ transform:translateY(6px) rotate(0deg) scale(1,1); }
+    30%{ transform:translateY(3px) rotate(-3deg) scale(0.97,1.04); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    52%{ transform:translateY(8px) rotate(5deg) scale(1.06,0.95); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    78%{ transform:translateY(6px) rotate(1deg) scale(1,1); animation-timing-function:ease-out; }
+  }
+  .fighter.attack-lowkick .legFrontUpper{ animation:lowSweepThigh .38s linear; }
+  .fighter.attack-lowkick .legFrontLower{ animation:lowSweepShin .38s linear; }
+  .fighter.attack-lowkick .kickLines{ animation:kickLinesFade .38s ease-out; }
+  .fighter.attack-lowkick .torsoG{ animation:lowSweepTorso .38s linear; }
 
-  /* ---- Aerial: jump-triggered strike gets a brief gold accent to read as a special hit ---- */
   .fighter.aerial .rig{ filter:drop-shadow(0 0 12px var(--gold)) brightness(1.25); }
-
-  /* ---- Dash: trailing speed-line streaks behind the runner ---- */
   .dashLines{ transition:opacity .1s; }
   .fighter.dashing .dashLines{ opacity:1; }
-
   .fighter.special .rig{ filter:drop-shadow(0 0 20px var(--gold)) brightness(1.4); }
 
   .mouthOpen{ transition:opacity .08s; }
@@ -284,7 +289,7 @@
   .fighter.attack-punch .mouthNeutral, .fighter.attack-kick .mouthNeutral, .fighter.hitflash .mouthNeutral{ opacity:0; }
 
   .fighter.hitflash .rig{ filter:drop-shadow(0 0 14px #fff) brightness(2); }
-  .fighter.dashing .rig{ filter:drop-shadow(0 0 16px currentColor) brightness(1.3); }
+  .fighter.dashing .rig{ filter:blur(1.6px) drop-shadow(0 0 18px currentColor) brightness(1.4) saturate(1.3); }
   .fighter.shielded .rig{ filter:drop-shadow(0 0 12px #7fffd4) brightness(1.15); }
   .fighter.blue .rig{ color:var(--blue); }
   .fighter.red .rig{ color:var(--red); }
@@ -298,17 +303,92 @@
   .impact{ position:absolute; top:0; left:50%; transform:translateX(-50%); font-size:clamp(16px,4vw,24px); opacity:0; pointer-events:none; z-index:6; }
   .impact.show{ animation:pop .5s ease-out forwards; }
   @keyframes pop{
-    0%{ opacity:1; transform:translate(-50%,0) scale(.6); }
-    60%{ opacity:1; transform:translate(-50%,-28px) scale(1.3); }
-    100%{ opacity:0; transform:translate(-50%,-46px) scale(1); }
+    0%{ opacity:1; transform:translate(-50%,0) scale(calc(.6 * var(--impactScale,1))); }
+    60%{ opacity:1; transform:translate(-50%,-28px) scale(calc(1.3 * var(--impactScale,1))); }
+    100%{ opacity:0; transform:translate(-50%,-46px) scale(calc(1 * var(--impactScale,1))); }
   }
   .comboPopup{ position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-size:11px; font-weight:900; color:var(--gold); opacity:0; white-space:nowrap; pointer-events:none; z-index:7; }
   .comboPopup.show{ animation:comboPop .7s ease-out forwards; }
   @keyframes comboPop{
-    0%{ opacity:1; transform:translate(-50%,0) scale(.8); }
-    50%{ opacity:1; transform:translate(-50%,-10px) scale(1.15); }
-    100%{ opacity:0; transform:translate(-50%,-24px) scale(1); }
+    0%{ opacity:1; transform:translate(-50%,0) scale(calc(.8 * var(--comboScale,1))); }
+    50%{ opacity:1; transform:translate(-50%,-10px) scale(calc(1.15 * var(--comboScale,1))); }
+    100%{ opacity:0; transform:translate(-50%,-24px) scale(calc(1 * var(--comboScale,1))); }
   }
+
+  /* ---- Foot-planting / weight-transfer pivot pose (placed BEFORE the hit-reaction rules
+     below so, if a plant and a hit-reaction class ever land on the same fighter in the
+     same frame, the hit-reaction wins the cascade — getting struck should always read
+     as the dominant event). ---- */
+  @keyframes plantShift{
+    0%{ transform:translateX(0) rotate(0deg) scale(1,1); }
+    35%{ transform:translateX(calc(var(--plantDir,1)*-4px)) rotate(calc(var(--plantDir,1)*-4deg)) scale(0.96,1.05); }
+    100%{ transform:translateX(0) rotate(0deg) scale(1,1); }
+  }
+  .fighter.planting .rigWrap{ animation:plantShift 0.24s cubic-bezier(.36,.07,.19,.97); }
+
+  /* ---- Squash & stretch: tiered impact deformation on the defender ---- */
+  @keyframes squashLight{
+    0%{ transform:scale(1,1); } 28%{ transform:scale(1.16,0.86); } 55%{ transform:scale(0.93,1.08); } 100%{ transform:scale(1,1); }
+  }
+  @keyframes squashHeavy{
+    0%{ transform:scale(1,1); } 26%{ transform:scale(1.3,0.72); } 52%{ transform:scale(0.85,1.2); } 78%{ transform:scale(1.08,0.94); } 100%{ transform:scale(1,1); }
+  }
+  @keyframes squashSpecial{
+    0%{ transform:scale(1,1); } 24%{ transform:scale(1.42,0.62); } 50%{ transform:scale(0.78,1.28); } 74%{ transform:scale(1.12,0.9); } 100%{ transform:scale(1,1); }
+  }
+  @keyframes squashKO{
+    0%{ transform:scale(1,1) rotate(0deg); } 22%{ transform:scale(1.55,0.55) rotate(-4deg); } 48%{ transform:scale(0.72,1.35) rotate(3deg); } 72%{ transform:scale(1.15,0.88) rotate(-1deg); } 100%{ transform:scale(1,1) rotate(0deg); }
+  }
+  .fighter.sq-light .rigWrap{ animation:squashLight .26s cubic-bezier(.36,.07,.19,.97); }
+  .fighter.sq-heavy .rigWrap{ animation:squashHeavy .32s cubic-bezier(.36,.07,.19,.97); }
+  .fighter.sq-special .rigWrap{ animation:squashSpecial .4s cubic-bezier(.36,.07,.19,.97); }
+  .fighter.sq-ko .rigWrap{ animation:squashKO .55s cubic-bezier(.36,.07,.19,.97); }
+
+  @keyframes atkSurge{ 0%{ transform:scale(1); } 30%{ transform:scale(1.09); } 100%{ transform:scale(1); } }
+  .fighter.atk-surge .rigWrap{ animation:atkSurge .22s ease-out; }
+
+  /* ---- Synchronized block reaction: defender braces (small compress), attacker
+     recoils as if bounced off the guard (stretch + lift) ---- */
+  @keyframes blockBrace{ 0%{ transform:scale(1,1); } 25%{ transform:scale(1.06,0.92); } 100%{ transform:scale(1,1); } }
+  @keyframes recoilBack{ 0%{ transform:scale(1,1) translateY(0); } 30%{ transform:scale(0.94,1.05) translateY(-3px); } 100%{ transform:scale(1,1) translateY(0); } }
+  .fighter.blockBrace .rigWrap{ animation:blockBrace .26s ease-out; }
+  .fighter.recoilBack .rigWrap{ animation:recoilBack .26s ease-out; }
+
+  /* ---- Particle sparks / streaks ---- */
+  .spark{
+    position:absolute; width:var(--sz); height:var(--sz); border-radius:50%;
+    pointer-events:none; z-index:9; transform:translate(-50%,-50%);
+    box-shadow:0 0 6px currentColor, 0 0 2px #fff;
+    animation:sparkFly .5s cubic-bezier(.15,.7,.4,1) forwards;
+  }
+  @keyframes sparkFly{
+    0%{ transform:translate(-50%,-50%) scale(1); opacity:1; }
+    70%{ opacity:1; }
+    100%{ transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.15); opacity:0; }
+  }
+  .sparkStreak{
+    position:absolute; height:3px; width:var(--sz,14px); border-radius:2px;
+    pointer-events:none; z-index:9; transform-origin:0% 50%;
+    box-shadow:0 0 6px currentColor;
+    animation:streakFly .38s cubic-bezier(.16,.84,.32,1) forwards;
+  }
+  @keyframes streakFly{
+    0%{ opacity:1; transform:translate(-50%,-50%) rotate(var(--ang,0deg)) scaleX(0.4); }
+    40%{ opacity:1; }
+    100%{ opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--ang,0deg)) scaleX(1.6); }
+  }
+
+  .fighter.afterimage{
+    opacity:.55; filter:blur(1.5px) saturate(1.5) brightness(1.25); pointer-events:none;
+    z-index:3; transition:opacity .26s linear, transform .26s ease-out;
+  }
+  .fighter.afterimage .impact, .fighter.afterimage .comboPopup, .fighter.afterimage .shieldBadge{ display:none; }
+
+  body.hitstop .fighter, body.hitstop .fighter *{ animation-play-state:paused !important; }
+
+  #koFlash{ position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:12; }
+  #koFlash.show{ animation:koFlashFade .45s ease-out; }
+  @keyframes koFlashFade{ 0%{ opacity:.5; } 100%{ opacity:0; } }
 
   #powerup{ position:absolute; font-size:26px; display:none; animation:float 1.4s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(255,207,77,.8)); z-index:4; }
   @keyframes float{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-8px);} }
@@ -317,9 +397,15 @@
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     font-size:clamp(22px,6.4vw,40px); font-weight:900; letter-spacing:2px; text-align:center; padding:10px;
     color:#fff; text-shadow:0 0 20px rgba(0,0,0,.8), 0 0 10px var(--gold);
-    opacity:0; pointer-events:none; transition:opacity .2s; z-index:15;
+    opacity:0; transform:scale(0.5); pointer-events:none; transition:opacity .2s, transform .2s; z-index:15;
   }
-  #banner.show{ opacity:1; }
+  #banner.show{ opacity:1; animation:bannerPop .38s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes bannerPop{
+    0%{ opacity:0; transform:scale(0.5) translateY(10px); }
+    55%{ opacity:1; transform:scale(1.12) translateY(0); }
+    75%{ opacity:1; transform:scale(0.96); }
+    100%{ opacity:1; transform:scale(1); }
+  }
   #banner.taunt{ font-size:clamp(16px,4.4vw,26px); color:var(--gold); }
 
   .screenOverlay{
@@ -344,12 +430,9 @@
   }
   #pauseBtn:active{ background:rgba(20,15,24,.85); }
 
-  /* ---------- Controls: joystick + action cluster ---------- */
+  /* ---------- Controls ---------- */
   .controlZone{ display:flex; align-items:center; justify-content:space-between; padding:6px 10px; flex-shrink:0; gap:8px; }
   .controlZone.top{ transform:rotate(180deg); }
-  /* 1P vs CPU: only one control zone remains, so give it the standard mobile-game
-     layout — joystick bottom-left, action buttons bottom-right, roomier targets —
-     instead of the face-to-face convention that only matters with a second player. */
   .controlZone.solo{ justify-content:space-between; padding:8px 18px; }
   .controlZone.solo .joyBase{ width:clamp(84px,24vw,112px); height:clamp(84px,24vw,112px); }
   .controlZone.solo .actionCluster{ width:clamp(150px,44vw,220px); }
@@ -445,6 +528,7 @@
           <div class="floor"></div>
 
           <div id="powerup">⚡</div>
+          <div id="koFlash"></div>
 
           <div id="blue" class="fighter blue">
             <div class="comboPopup" id="comboBlue"></div>
@@ -515,7 +599,6 @@
 <script>
 (function(){
   // ================= Character roster =================
-  // Each char: color palette + accessory + stat multipliers.
   const CHARACTERS = [
     { key:'boxer',      name:'Boxer',      color:'#3f7bff', accent:'#ffcf4d', skin:'#ffd9b3', torsoScale:1.0, accessory:'gloves',
       stats:{} },
@@ -550,7 +633,6 @@
     }
   }
 
-  // robot gets glowing accent-colored eyes instead of the default pupils
   function faceSVG(ch){
     const isRobot = ch.accessory==='antenna';
     const eyeFill = isRobot ? ch.accent : '#1a1420';
@@ -566,21 +648,11 @@
       </g>`;
   }
 
-  // Jointed stick-figure rig: 2-segment arms/legs (upper+lower), boxer guard rest pose.
-  // Nested groups so lower-segment rotation pivots correctly with the parent upper-segment.
   function fighterSVGMarkup(ch){
     const ts = ch.torsoScale;
-    // Body reads as ONE figure via three fixes: (1) only two body tones total —
-    // a back tone (limbs behind the torso) and the main tone (front limbs + torso),
-    // instead of a different shade per segment; (2) a filled joint circle at every
-    // shoulder/elbow/hip/knee that sits on top of both meeting segments, welding them
-    // together instead of leaving a seam; (3) a flared torso silhouette (wide at the
-    // shoulders/hips, narrower at the waist) instead of a uniform straight rod, so limbs
-    // visibly grow out of a body mass rather than being taped onto a stick.
     const back = shade(ch.color,-30);
     const main = ch.color;
     const jointBack = back, jointMain = main;
-    // torso silhouette coords (viewBox units), scaled by ts around the spine at x=30
     const shW=6.5*ts, waistW=4*ts, hipW=5.8*ts;
     const torsoPath = `M${30-shW},27 Q${30-shW-1.5},38 ${30-waistW},45 Q${30-hipW+0.5},52 ${30-hipW},58 `+
       `L${30+hipW},58 Q${30+hipW-0.5},52 ${30+waistW},45 Q${30+shW+1.5},38 ${30+shW},27 Z`;
@@ -673,6 +745,7 @@
   const arenaEl = document.getElementById('arena');
   const bannerEl = document.getElementById('banner');
   const powerupEl = document.getElementById('powerup');
+  const koFlashEl = document.getElementById('koFlash');
   const overlay = document.getElementById('overlay');
   const resultText = document.getElementById('resultText');
   const restartBtn = document.getElementById('restartBtn');
@@ -684,29 +757,57 @@
   const pauseExitBtn = document.getElementById('pauseExitBtn');
 
   // ================= Constants =================
-  const MOVE_SPEED = 0.62;        // % of arena per frame-ish (x axis, 0-100 scale)
-  const DEPTH_SPEED = 0.014;      // depth 0..1 per frame
+  const MOVE_SPEED = 0.62;
   const MAX_HEALTH = 100;
-  const PUNCH_DMG = 8, PUNCH_RANGE = 16, PUNCH_COOLDOWN = 350, PUNCH_KNOCKBACK = 3;
-  const KICK_DMG = 18, KICK_RANGE = 19, KICK_COOLDOWN = 1100, KICK_KNOCKBACK = 6;
-  const BLOCK_REDUCTION = 0.75;
+  const PUNCH_DMG = 8, PUNCH_RANGE = 16, PUNCH_KNOCKBACK = 3;
+  const KICK_DMG = 18, KICK_RANGE = 19, KICK_KNOCKBACK = 6;
   const COMBO_WINDOW = 1000;
   const ROUND_TIME = 40;
   const ROUNDS_TO_WIN = 2;
   const MAX_ROUNDS = 5;
   const COLLECT_RANGE = 14;
-  const DASH_WINDOW = 350;      // ms for double-tap detection
-  const DASH_DEFLECT = 0.7;     // joystick magnitude to count as a "press"
-  const DASH_DURATION = 190;    // ms dash lasts
-  const DASH_COOLDOWN = 550;    // ms between dashes
-  const DASH_IFRAMES = 160;     // ms of invincibility on dash
+  const DASH_WINDOW = 350;
+  const DASH_DEFLECT = 0.7;
+  const DASH_DURATION = 210;
+  const DASH_COOLDOWN = 550;
+  const DASH_IFRAMES = 160;
+  const DASH_POWER = 3.2;
+  const AFTERIMAGE_INTERVAL = 20;
 
-  // Universal specials: input-buffer combo detection
-  const SPECIAL_WINDOW = 700;      // max ms between presses in a combo sequence
-  const SPECIAL_COOLDOWN = 2600;   // ms before a fighter can special again
+  // Momentum / weight / ground friction
+  const ACCEL_RATE = 0.34;
+  const DECEL_RATE = 0.20;
+  const GROUND_FRICTION = 0.86;       // per-frame multiplicative drag, sells "pushing against canvas"
+  const PIVOT_DOT_THRESHOLD = -0.35;  // how strongly input must oppose current velocity to count as a reversal
+  const PIVOT_LOCK_MS = 130;          // foot-planting lock duration on a hard direction reversal
+  const PIVOT_DECEL_MULT = 0.35;      // extra sluggishness while planting
+
+  // Universal specials
+  const SPECIAL_WINDOW = 700;
+  const SPECIAL_COOLDOWN = 2600;
   const SPECIAL_RANGE_BONUS = 4;
   const RUSH_DMG_BONUS = 14;
   const KICK_SPECIAL_DMG_BONUS = 20;
+
+  // Attack state-machine timing: each normal attack now has startup (whiff-only window),
+  // active (the single frame-window where a hit is resolved), and an outcome-dependent
+  // recovery tacked on afterward — hits recover fastest, blocks are worse, whiffs/dodges
+  // are worst, creating real risk/reward timing instead of a flat cooldown.
+  const ATTACK_TIMING = {
+    punch: { startup:120, active:70, recoveryBase:{ hit:140, block:230, whiff:300 } },
+    kick:  { startup:150, active:80, recoveryBase:{ hit:220, block:380, whiff:620 } },
+    low:   { startup:190, active:80, recoveryBase:{ hit:240, block:400, whiff:580 } }
+  };
+  const AERIAL_TIMING_MULT = 1.15; // airborne strikes take a little longer to wind up
+
+  function getAttackTiming(type, variant){
+    const key = (type==='kick' && variant==='low') ? 'low' : type;
+    const base = ATTACK_TIMING[key];
+    if(variant==='aerial'){
+      return { startup: base.startup*AERIAL_TIMING_MULT, active: base.active, recoveryBase: base.recoveryBase };
+    }
+    return base;
+  }
 
   // ================= Select screen state =================
   let blueKey = 'boxer', redKey = 'ninja', mode = '2p';
@@ -800,21 +901,22 @@
     blueJump:false, bluePunch:false, blueKick:false, blueBlock:false,
     redJump:false, redPunch:false, redKick:false, redBlock:false
   };
-  // Joystick analog state, normalized -1..1
-  let joy = {
-    blue:{ x:0, y:0 },
-    red:{ x:0, y:0 }
-  };
+  let joy = { blue:{ x:0, y:0 }, red:{ x:0, y:0 } };
   let dashTrack = {
     blue:{ wasActive:false, lastTime:0, dir:null },
     red:{ wasActive:false, lastTime:0, dir:null }
   };
-  // previous-frame snapshot of jump/punch/kick for rising-edge detection (combo input buffer)
   let prevInput = {
     blueJump:false, bluePunch:false, blueKick:false,
     redJump:false, redPunch:false, redKick:false
   };
-  let timerInterval = null, loopId = null, powerupCountdown = 8;
+  let timerInterval = null, loopId = null, powerupCountdown = 8, hitStopTimer = null;
+  const aiTapTimers = {};
+  function aiTap(key, ms){
+    input[key] = true;
+    clearTimeout(aiTapTimers[key]);
+    aiTapTimers[key] = setTimeout(()=>{ input[key]=false; }, ms||110);
+  }
 
   function randRange(a,b){ return a + Math.random()*(b-a); }
 
@@ -823,19 +925,19 @@
     const s = ch.stats || {};
     return {
       charKey, ch,
-      // shared 2D ring coords: y 0-100 is now the PRIMARY front/back approach axis running
-      // the long (portrait) side of the screen — Blue's own end is near y=100 (screen-near/
-      // bottom, renders bigger), Red's own end is near y=0 (screen-far/top, renders smaller).
-      // x 0-100 is a narrow left/right strafe band around the center lane (see X_MIN/X_MAX).
       x: 50, y: homeSide==='blue' ? 82 : 18,
+      vx: 0, vy: 0, pivoting:false, plantUntil:0,
       health: MAX_HEALTH * (s.health||1),
       maxHealth: MAX_HEALTH * (s.health||1),
       hits:0, combo:0, lastHitTime:-99999,
-      cooldownPunch:0, cooldownKick:0,
+      // attack state machine: 'none' | 'startup' | 'active' | 'recovery'
+      atkState:'none', atkType:null, atkVariant:null, atkPhaseStart:0,
+      atkStartupMs:0, atkActiveMs:0, atkActiveStart:0, atkRecoveryEnd:0,
+      atkTiming:null, atkOutcome:null, bufferedAttack:null, _atkClassTimer:null,
       blocking:false, jumping:false,
       speedBoostUntil:0, damageBoostUntil:0, shielded:false,
       dashUntil:0, dashCooldownUntil:0, invincibleUntil:0, dashDir:{x:0,y:0},
-      comboBuffer:[], specialCooldownUntil:0
+      comboBuffer:[], specialCooldownUntil:0, lastAfterimageTime:0
     };
   }
 
@@ -845,9 +947,7 @@
     fighterEl.querySelector('.svgHolder').innerHTML = fighterSVGMarkup(ch);
   }
 
-  // ================= Input: keyboard (desktop testing) =================
-  // Movement and actions now use fully separate keys (front/back is the primary axis,
-  // so it needed its own dedicated key rather than doubling up with an attack button).
+  // ================= Input: keyboard =================
   const keyDown = {};
   const keyMap = {
     'a':'blueLeft','A':'blueLeft','d':'blueRight','D':'blueRight','w':'blueForward','W':'blueForward',
@@ -871,7 +971,6 @@
   });
 
   function keyboardJoyOverride(){
-    // translate WASD/Arrows into joy.x / joy.y so keyboard testers get identical behavior
     let bx=0,by=0;
     if(keyDown.blueLeft) bx-=1;
     if(keyDown.blueRight) bx+=1;
@@ -942,7 +1041,7 @@
     const mag = Math.hypot(nx,ny);
     const tr = dashTrack[side];
     if(mag < DASH_DEFLECT){ tr.wasActive = false; return; }
-    if(tr.wasActive) return; // still holding from before, not a fresh press
+    if(tr.wasActive) return;
     tr.wasActive = true;
     const now = performance.now();
     const dir = { x:nx/mag, y:ny/mag };
@@ -962,9 +1061,13 @@
     f.dashCooldownUntil = now + DASH_COOLDOWN;
     f.invincibleUntil = now + DASH_IFRAMES;
     f.dashDir = dir;
-    (side==='blue'?blueEl:redEl).classList.add('dashing');
-    setTimeout(()=> (side==='blue'?blueEl:redEl).classList.remove('dashing'), DASH_DURATION+60);
+    f.pivoting = false; f.plantUntil = 0;
+    const el = side==='blue'?blueEl:redEl;
+    el.classList.add('dashing');
+    setTimeout(()=> el.classList.remove('dashing'), DASH_DURATION+60);
     playSound('dash');
+    const pos = screenPos(f);
+    spawnSparks(pos.left, pos.top, f.ch.color, 5, 0.6);
     if(f.ch.stats.dashDamageBoost){ f.damageBoostUntil = now + 500; }
   }
 
@@ -1013,7 +1116,8 @@
   function initMatch(){
     state = {
       round:1, blueRoundWins:0, redRoundWins:0, matchOver:false, roundActive:false, paused:false,
-      blue:newFighter(blueKey,'blue'), red:newFighter(redKey,'red'), powerup:null, aiNextDecision:0
+      blue:newFighter(blueKey,'blue'), red:newFighter(redKey,'red'), powerup:null, aiNextDecision:0,
+      hitStopUntil:0
     };
     Object.keys(input).forEach(k=>input[k]=false);
     joy.blue.x=joy.blue.y=joy.red.x=joy.red.y=0;
@@ -1035,6 +1139,8 @@
   }
 
   function startRound(){
+    if(state.blue) clearTimeout(state.blue._atkClassTimer);
+    if(state.red) clearTimeout(state.red._atkClassTimer);
     state.blue = newFighter(blueKey,'blue');
     state.red = newFighter(redKey,'red');
     state.roundTime = ROUND_TIME;
@@ -1043,7 +1149,9 @@
     positionFighters();
     updateHealthBars();
     [blueEl, redEl].forEach(el=>{
-      el.classList.remove('jump','attack-punch','attack-kick','hitflash','blocking','dashing','shielded');
+      el.classList.remove('jump','attack-punch','attack-kick','attack-lowkick','aerial','hitflash',
+        'blocking','dashing','shielded','special','sq-light','sq-heavy','sq-special','sq-ko',
+        'atk-surge','planting','blockBrace','recoilBack');
     });
     state.roundActive = false;
 
@@ -1086,7 +1194,16 @@
     };
 
     if(wasKO && winner){
-      shakeArena();
+      const loser = winner==='blue' ? state.red : state.blue;
+      const loserEl = winner==='blue' ? redEl : blueEl;
+      const pos = screenPos(loser);
+      shakeArena(SHAKE_TIERS.ko);
+      spawnSparks(pos.left, pos.top, '#ffffff', SPARK_TIERS.ko, 2.1);
+      spawnStreaks(pos.left, pos.top, '#ffcf4d', STREAK_TIERS.ko, 1.8);
+      pulseClass(loserEl, 'hitflash', 560);
+      if(!loser.jumping) pulseClass(loserEl, 'sq-ko', 560);
+      koFlashEl.classList.remove('show'); void koFlashEl.offsetWidth; koFlashEl.classList.add('show');
+      triggerHitStop(HITSTOP_TIERS.ko);
       showBanner(text, 1200, ()=>{
         showBanner((winner==='blue'?'🔵':'🔴') + ' KNOCKOUT!', 1100, goNext, true);
       });
@@ -1106,7 +1223,7 @@
   function showBanner(text, duration, cb, taunt){
     bannerEl.textContent = text;
     bannerEl.classList.toggle('taunt', !!taunt);
-    bannerEl.classList.add('show');
+    bannerEl.classList.remove('show'); void bannerEl.offsetWidth; bannerEl.classList.add('show');
     setTimeout(()=>{
       bannerEl.classList.remove('show');
       if(cb) cb();
@@ -1122,30 +1239,21 @@
     redHealthEl.style.width = Math.max(0,(state.red.health/state.red.maxHealth)*100) + '%';
   }
 
-  // ================= World -> screen projection (2.5D fake depth) =================
-  // The ring now runs the LONG (portrait) side of the screen: y 0-100 is the shared
-  // front/back approach lane (Red's own end near y=0/top, Blue's own end near y=100/
-  // bottom). Larger y = nearer the bottom = nearer an implied ringside camera = bigger,
-  // smaller y = deeper into the ring = smaller — a real vanishing-point runway instead
-  // of the old flat same-scale layout. x 0-100 is a narrow strafe band either side of
-  // the center lane, purely lateral, no scale effect.
+  // ================= World -> screen projection =================
   const Y_MIN = 6, Y_MAX = 94;
   function positionFighters(){
     layoutFighter(blueEl, state.blue, state.red, false);
     layoutFighter(redEl, state.red, state.blue, true);
   }
   function layoutFighter(el, f, opponent, isRed){
-    const topPct = 8 + (f.y/100)*80;        // map to arena vertical band 8%..88%
-    const scale = 0.62 + (f.y/100)*0.62;    // lower on screen = bigger/closer — the runway effect
+    const topPct = 8 + (f.y/100)*80;
+    const scale = 0.62 + (f.y/100)*0.62;
     el.style.left = f.x + '%';
     el.style.top = topPct + '%';
     const facesRight = f.x <= opponent.x;
     el.style.transform = `translate(-50%,-62%) scale(${scale.toFixed(3)})`;
     const rig = el.querySelector('.rig');
     if(rig) rig.style.transform = `scaleX(${facesRight ? 1 : -1})`;
-    // Subtle z-axis "coming out of the screen" tilt via 3D perspective + rotateY, turning
-    // each fighter slightly toward the center lane — more pronounced the closer/bigger
-    // (deeper into their own foreground) they are, for extra dimensional feel.
     const tiltMag = 6 + (f.y/100)*9;
     const tiltSign = isRed ? -1 : 1;
     const tilt = el.querySelector('.tiltWrap');
@@ -1154,14 +1262,12 @@
   }
 
   // ================= Collision / bounds =================
-  const X_MIN = 32, X_MAX = 68;   // narrow strafe band around the center lane
-  const MIN_GAP = 12;             // minimum front/back distance the fighters can close to
+  const X_MIN = 32, X_MAX = 68;
+  const MIN_GAP = 12;
   function clampFighter(f){
     f.x = Math.max(X_MIN, Math.min(X_MAX, f.x));
     f.y = Math.max(Y_MIN, Math.min(Y_MAX, f.y));
   }
-  // Blue is always the higher-y (near) fighter, Red the lower-y (far) fighter — they can
-  // never pass through one another along the approach lane.
   function resolveRingGap(){
     const gap = state.blue.y - state.red.y;
     if(gap < MIN_GAP){
@@ -1175,18 +1281,121 @@
     if(fighter.jumping) return;
     fighter.jumping = true;
     el.classList.add('jump');
-    const dur = 420 * (fighter.ch.stats.jumpMult ? 1/Math.sqrt(fighter.ch.stats.jumpMult) : 1) * (fighter.ch.stats.jumpMult||1);
     setTimeout(()=>{ fighter.jumping = false; el.classList.remove('jump'); }, 420);
   }
 
   function showCombo(isBlue, combo){
     const el = isBlue ? comboBlueEl : comboRedEl;
+    const comboScale = Math.min(1 + (combo-1)*0.17, 2.3);
+    el.style.setProperty('--comboScale', comboScale.toFixed(2));
     el.textContent = combo + 'x COMBO!';
     el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   }
 
-  function shakeArena(){
+  // ================= Juice tier tables =================
+  const SHAKE_TIERS   = { punch:0.8,  punchAerial:1.4,  kick:1.8,  kickAerial:2.3,  low:1.8,  block:0.6,  specialWindup:1.0, special:3.6, ko:5.2 };
+  const SPARK_TIERS   = { punch:11,   punchAerial:15,   kick:18,   kickAerial:22,   low:16,   block:11,                       special:28,  ko:40  };
+  const STREAK_TIERS  = { punch:0,    punchAerial:2,    kick:3,    kickAerial:4,    low:3,    block:0,                        special:6,   ko:9   };
+  const HITSTOP_TIERS = { punch:30,   punchAerial:80,   kick:110,  kickAerial:145,  low:110,  block:45,                       special:220, ko:340 };
+  const SQUASH_TIERS  = { punch:'sq-light', punchAerial:'sq-heavy', kick:'sq-heavy', kickAerial:'sq-heavy', low:'sq-heavy' };
+  const SQUASH_DURATIONS = { 'sq-light':260, 'sq-heavy':320, 'sq-special':400, 'sq-ko':560 };
+
+  function pulseClass(el, cls, dur){
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    setTimeout(()=>{ el.classList.remove(cls); }, dur);
+  }
+
+  function triggerHitStop(ms){
+    if(!ms) return;
+    const now = performance.now();
+    state.hitStopUntil = Math.max(state.hitStopUntil||0, now + ms);
+    document.body.classList.add('hitstop');
+    clearTimeout(hitStopTimer);
+    hitStopTimer = setTimeout(()=>{ document.body.classList.remove('hitstop'); }, ms);
+  }
+
+  function shakeArena(mag){
+    mag = (mag==null || isNaN(mag)) ? 1 : mag;
+    arenaEl.style.setProperty('--shakeMag', mag);
     arenaEl.classList.remove('shake'); void arenaEl.offsetWidth; arenaEl.classList.add('shake');
+  }
+
+  function screenPos(f){
+    return { left: f.x, top: 8 + (f.y/100)*80 };
+  }
+
+  function spawnSparks(leftPct, topPct, color, count, power){
+    count = count || 8; power = power || 1;
+    for(let i=0;i<count;i++){
+      const el = document.createElement('div');
+      el.className = 'spark';
+      const angle = Math.random()*Math.PI*2;
+      const speedVariance = 0.55 + Math.random()*0.9;
+      const dist = (16 + Math.random()*30) * power * speedVariance;
+      const dx = Math.cos(angle)*dist;
+      const dy = Math.sin(angle)*dist - 8*power;
+      el.style.left = leftPct + '%';
+      el.style.top = topPct + '%';
+      el.style.setProperty('--dx', dx.toFixed(1)+'px');
+      el.style.setProperty('--dy', dy.toFixed(1)+'px');
+      el.style.setProperty('--sz', (2.5 + Math.random()*3.8*power).toFixed(1)+'px');
+      el.style.background = color;
+      el.style.color = color;
+      arenaEl.appendChild(el);
+      const cleanup = ()=>{ if(el.parentNode) el.parentNode.removeChild(el); };
+      el.addEventListener('animationend', cleanup, { once:true });
+      setTimeout(cleanup, 650);
+    }
+  }
+
+  function spawnStreaks(leftPct, topPct, color, count, power){
+    count = count || 0; power = power || 1;
+    for(let i=0;i<count;i++){
+      const el = document.createElement('div');
+      el.className = 'sparkStreak';
+      const angle = Math.random()*Math.PI*2;
+      const dist = (24 + Math.random()*38) * power;
+      const dx = Math.cos(angle)*dist, dy = Math.sin(angle)*dist;
+      el.style.left = leftPct + '%'; el.style.top = topPct + '%';
+      el.style.setProperty('--dx', dx.toFixed(1)+'px');
+      el.style.setProperty('--dy', dy.toFixed(1)+'px');
+      el.style.setProperty('--ang', (angle*180/Math.PI).toFixed(1)+'deg');
+      el.style.setProperty('--sz', (10 + Math.random()*12*power).toFixed(1)+'px');
+      el.style.background = color; el.style.color = color;
+      arenaEl.appendChild(el);
+      const cleanup = ()=>{ if(el.parentNode) el.parentNode.removeChild(el); };
+      el.addEventListener('animationend', cleanup, { once:true });
+      setTimeout(cleanup, 550);
+    }
+  }
+
+  const AFTERIMAGE_STRIP_CLASSES = ['hitflash','attack-punch','attack-kick','attack-lowkick','aerial',
+    'special','blocking','jump','dashing','shielded','sq-light','sq-heavy','sq-special','sq-ko',
+    'atk-surge','planting','blockBrace','recoilBack'];
+  function spawnAfterimage(el){
+    const ghost = el.cloneNode(true);
+    ghost.removeAttribute('id');
+    ghost.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
+    AFTERIMAGE_STRIP_CLASSES.forEach(c=>ghost.classList.remove(c));
+    ghost.classList.add('afterimage');
+    ghost.style.zIndex = 3;
+    const baseTransform = ghost.style.transform;
+    arenaEl.insertBefore(ghost, el);
+    requestAnimationFrame(()=>{
+      ghost.style.opacity = '0';
+      ghost.style.transform = baseTransform + ' scale(0.92)';
+    });
+    setTimeout(()=>{ if(ghost.parentNode) ghost.parentNode.removeChild(ghost); }, 300);
+  }
+  function updateDashTrails(now){
+    if(now < state.blue.dashUntil && now - (state.blue.lastAfterimageTime||0) > AFTERIMAGE_INTERVAL){
+      state.blue.lastAfterimageTime = now;
+      spawnAfterimage(blueEl);
+    }
+    if(now < state.red.dashUntil && now - (state.red.lastAfterimageTime||0) > AFTERIMAGE_INTERVAL){
+      state.red.lastAfterimageTime = now;
+      spawnAfterimage(redEl);
+    }
   }
 
   function fighterDistance(a, b){
@@ -1194,26 +1403,67 @@
     return Math.sqrt(dx*dx + dy*dy);
   }
 
-  // variant: 'standard' | 'low' (bend+kick sweep) | 'aerial' (jump+punch/kick)
-  function attemptAttack(att, atkEl, atkSide, def, defEl, defSide, defImpactEl, type, isBlue, variant){
-    variant = variant || 'standard';
-    const cdKey = type==='punch' ? 'cooldownPunch' : 'cooldownKick';
-    if(att[cdKey] > 0) return;
-    const s = att.ch.stats;
-    const cdMult = (s.cooldownMult||1) * (type==='punch' ? (s.punchCooldownMult||1) : 1);
-    att[cdKey] = (type==='punch' ? PUNCH_COOLDOWN : KICK_COOLDOWN) * cdMult * (variant==='low' ? 1.15 : 1);
-    const cls = variant==='low' ? 'attack-lowkick' : variant==='aerial' ? 'attack-'+type+' aerial' : 'attack-'+type;
-    atkEl.classList.remove('attack-punch','attack-kick','attack-lowkick','aerial');
-    void atkEl.offsetWidth;
-    cls.split(' ').forEach(c=>atkEl.classList.add(c)); // force restart on rapid re-attacks
-    setTimeout(()=>{ atkEl.classList.remove('attack-punch','attack-kick','attack-lowkick','aerial'); }, type==='punch'?340:380);
+  // ================= Synchronized contact lock =================
+  // Pulls BOTH combatants toward an "ideal contact distance" the instant a strike
+  // connects, so the pose reads as a clean hit rather than a limb reaching across empty
+  // air. This is a positional correction (not true limb IK) — it snaps the bodies to a
+  // believable range, then the existing hit-stop freeze holds that pose for several
+  // frames before knockback separates them again, which is what sells the "lock."
+  function contactLock(att, def, idealGap){
+    const signedGap = att.y - def.y;
+    const absGap = Math.abs(signedGap);
+    if(absGap > idealGap){
+      const shrink = Math.min(absGap - idealGap, 6);
+      const sign = Math.sign(signedGap) || 1;
+      def.y += sign * shrink * 0.7;   // defender gives most of the ground
+      att.y -= sign * shrink * 0.3;   // attacker steps in a little too
+      clampFighter(def); clampFighter(att);
+    }
+    const xGap = att.x - def.x;
+    if(Math.abs(xGap) > 3){
+      const xShrink = Math.min(Math.abs(xGap)-3, 2);
+      const xSign = Math.sign(xGap) || 1;
+      def.x += xSign*xShrink*0.6;
+      att.x -= xSign*xShrink*0.4;
+      clampFighter(def); clampFighter(att);
+    }
+  }
 
-    const range = (type==='punch' ? PUNCH_RANGE : KICK_RANGE) + (variant==='low' ? -2 : 0);
-    const dist = fighterDistance(att, def);
-    if(dist > range) return;
-
+  // ================= Normal-attack state machine =================
+  function startAttack(f, el, side, type, isBuffered){
+    if(type==='punch' && f.blocking) return; // no punch option while bent
+    const variant = f.jumping ? 'aerial' : (f.blocking && type==='kick' ? 'low' : 'standard');
+    const timing = getAttackTiming(type, variant);
     const now = performance.now();
-    if(now < def.invincibleUntil) return; // dodged via dash i-frames
+    f.atkState = 'startup';
+    f.atkType = type;
+    f.atkVariant = variant;
+    f.atkPhaseStart = now;
+    f.atkStartupMs = isBuffered ? timing.startup*0.7 : timing.startup; // chained follow-ups snap out faster
+    f.atkActiveMs = timing.active;
+    f.atkTiming = timing;
+    f.atkOutcome = null;
+    f.bufferedAttack = null;
+
+    const cls = variant==='low' ? 'attack-lowkick' : variant==='aerial' ? 'attack-'+type+' aerial' : 'attack-'+type;
+    el.classList.remove('attack-punch','attack-kick','attack-lowkick','aerial');
+    void el.offsetWidth;
+    cls.split(' ').forEach(c=>el.classList.add(c));
+
+    const animMs = type==='punch' ? 300 : (variant==='low' ? 380 : 340);
+    clearTimeout(f._atkClassTimer);
+    f._atkClassTimer = setTimeout(()=>{ el.classList.remove('attack-punch','attack-kick','attack-lowkick','aerial'); }, animMs);
+  }
+
+  function resolveAttack(att, atkEl, atkSide, def, defEl, defSide, defImpactEl, isBlue){
+    const type = att.atkType, variant = att.atkVariant;
+    const s = att.ch.stats;
+    const range = (type==='punch'?PUNCH_RANGE:KICK_RANGE) + (variant==='low'?-2:0) + (variant==='aerial'?2:0);
+    const dist = fighterDistance(att, def);
+    const now = performance.now();
+
+    if(dist > range){ att.atkOutcome='whiff'; return; }
+    if(now < def.invincibleUntil){ att.atkOutcome='whiff'; return; }
 
     att.combo = (now - att.lastHitTime < COMBO_WINDOW) ? att.combo+1 : 1;
     att.lastHitTime = now;
@@ -1225,45 +1475,72 @@
     dmg += Math.min(att.combo-1, 5) * 2;
     if(now < att.damageBoostUntil) dmg *= 2;
 
-    // Position-based dodging: ducking slips a standing high attack entirely, but a
-    // ducked opponent is still at the same level as an incoming low sweep. Jumping
-    // clears a low sweep entirely, but doesn't avoid a normal/aerial strike.
     let dodged = false;
-    if(def.blocking && variant!=='low') dodged = true;                 // bent under a high attack
-    if(def.jumping && variant==='low') dodged = true;                  // hopped over a sweep
+    if(def.blocking && variant!=='low') dodged = true;
+    if(def.jumping && variant==='low') dodged = true;
 
     if(dodged){
+      att.atkOutcome = 'whiff'; // full evasion — same punishing recovery bucket as a whiff
       defImpactEl.textContent = '💨';
       defImpactEl.classList.remove('show'); void defImpactEl.offsetWidth; defImpactEl.classList.add('show');
       return;
     }
+
+    let tierKey = type==='punch'
+      ? (variant==='aerial' ? 'punchAerial' : 'punch')
+      : (variant==='low' ? 'low' : (variant==='aerial' ? 'kickAerial' : 'kick'));
+    const idealGap = (type==='punch'?11:(variant==='low'?9:13)) + (variant==='aerial'?2:0);
 
     if(def.shielded){
       dmg = 0;
       def.shielded = false;
       defEl.classList.remove('shielded');
       playSound('block');
-    } else if(type==='kick' || variant==='low'){
-      playSound('kick');
-      shakeArena();
+      tierKey = 'block';
+      att.atkOutcome = 'block';
+      contactLock(att, def, idealGap);
+      // synchronized recoil: defender braces with a small give, attacker bounces off the guard
+      const blockKb = (type==='punch'?PUNCH_KNOCKBACK:KICK_KNOCKBACK)*0.5;
+      def.y += isBlue ? -blockKb*0.4 : blockKb*0.4;
+      att.y += isBlue ?  blockKb*1.1 : -blockKb*1.1;
+      clampFighter(def); clampFighter(att);
+      pulseClass(defEl,'blockBrace',260);
+      pulseClass(atkEl,'recoilBack',260);
     } else {
-      playSound('punch');
+      att.atkOutcome = 'hit';
+      if(type==='kick' || variant==='low'){ playSound('kick'); } else { playSound('punch'); }
+      contactLock(att, def, idealGap);
     }
 
     def.health = Math.max(0, def.health - dmg);
     att.hits++;
 
-    let kb = (type==='punch' ? PUNCH_KNOCKBACK : KICK_KNOCKBACK) * (att.ch.stats.knockback||1) * (variant==='aerial'?1.4:1);
-    // knockback pushes the defender away from the attacker along the front/back lane
-    def.y += isBlue ? -kb : kb;
-    clampFighter(def);
+    if(att.atkOutcome==='hit'){
+      let kb = (type==='punch'?PUNCH_KNOCKBACK:KICK_KNOCKBACK) * (att.ch.stats.knockback||1) * (variant==='aerial'?1.4:1);
+      def.y += isBlue ? -kb : kb;
+      clampFighter(def);
+    }
 
+    const impactScale = Math.min(1 + (att.combo-1)*0.13, 2.0);
+    defImpactEl.style.setProperty('--impactScale', impactScale.toFixed(2));
     defEl.classList.add('hitflash');
     defImpactEl.textContent = variant==='low' ? '🌀' : variant==='aerial' ? '⭐' : type==='kick' ? '💥' : '✨';
     defImpactEl.classList.remove('show'); void defImpactEl.offsetWidth; defImpactEl.classList.add('show');
     setTimeout(()=>defEl.classList.remove('hitflash'), 260);
 
-    if(att.combo>=2) showCombo(isBlue, att.combo);
+    if(att.combo>=2 && att.atkOutcome==='hit') showCombo(isBlue, att.combo);
+
+    shakeArena(SHAKE_TIERS[tierKey]);
+    const pos = screenPos(def);
+    const sparkColor = tierKey==='block' ? '#7fffd4' : att.ch.color;
+    spawnSparks(pos.left, pos.top, sparkColor, SPARK_TIERS[tierKey], variant==='aerial' ? 1.3 : 1);
+    if(STREAK_TIERS[tierKey]) spawnStreaks(pos.left, pos.top, sparkColor, STREAK_TIERS[tierKey], variant==='aerial' ? 1.3 : 1);
+    if(!def.jumping && tierKey!=='block'){
+      const sqCls = SQUASH_TIERS[tierKey];
+      if(sqCls) pulseClass(defEl, sqCls, SQUASH_DURATIONS[sqCls]);
+    }
+    if(!att.jumping && att.atkOutcome==='hit') pulseClass(atkEl,'atk-surge',240);
+    triggerHitStop(HITSTOP_TIERS[tierKey]);
 
     updateHealthBars();
     if(def.health<=0 && state.roundActive){
@@ -1271,14 +1548,60 @@
     }
   }
 
-  // ================= Universal specials (combo input buffer) =================
-  // Rising Double Kick: Jump -> Kick -> Kick   |   Rush Combo: Punch -> Punch -> Kick
-  function recordInputEdges(side, now){
+  // Drives the state machine one tick: captures fresh presses (starting or buffering an
+  // attack), advances startup->active->recovery on schedule, and — the "eliminate awkward
+  // pauses" requirement — auto-fires any buffered attack the instant recovery ends, with
+  // a shortened startup so the follow-up snaps directly out of the previous move's tail.
+  function updateAttackState(f, el, side, opp, oppEl, oppSide, oppImpactEl, isBlue, now, edges){
+    if(edges.punch && !f.blocking){
+      if(f.atkState==='none') startAttack(f, el, side, 'punch', false);
+      else f.bufferedAttack = 'punch';
+    }
+    if(edges.kick){
+      if(f.atkState==='none') startAttack(f, el, side, 'kick', false);
+      else f.bufferedAttack = 'kick';
+    }
+
+    if(f.atkState==='none') return;
+
+    if(f.atkState==='startup'){
+      if(now - f.atkPhaseStart >= f.atkStartupMs){
+        f.atkState = 'active';
+        f.atkActiveStart = now;
+        resolveAttack(f, el, side, opp, oppEl, oppSide, oppImpactEl, isBlue);
+      }
+      return;
+    }
+    if(f.atkState==='active'){
+      if(now - f.atkActiveStart >= f.atkActiveMs){
+        const bucket = f.atkOutcome==='hit' ? 'hit' : f.atkOutcome==='block' ? 'block' : 'whiff';
+        const s = f.ch.stats;
+        const cdMult = (s.cooldownMult||1) * (f.atkType==='punch' ? (s.punchCooldownMult||1) : 1);
+        f.atkState = 'recovery';
+        f.atkRecoveryEnd = now + f.atkTiming.recoveryBase[bucket]*cdMult;
+      }
+      return;
+    }
+    if(f.atkState==='recovery'){
+      if(now >= f.atkRecoveryEnd){
+        if(f.bufferedAttack){
+          const next = f.bufferedAttack;
+          f.bufferedAttack = null;
+          if(next==='punch' && f.blocking){ f.atkState='none'; }
+          else startAttack(f, el, side, next, true);
+        } else {
+          f.atkState = 'none';
+        }
+      }
+    }
+  }
+
+  // ================= Universal specials =================
+  function recordInputEdges(side, now, edges){
     if(state.matchOver || !state.roundActive) return;
     const f = side==='blue' ? state.blue : state.red;
-    const map = [[side+'Jump','jump'], [side+'Punch','punch'], [side+'Kick','kick']];
-    map.forEach(([key,name])=>{
-      if(input[key] && !prevInput[key]){
+    [['jump',edges.jump],['punch',edges.punch],['kick',edges.kick]].forEach(([name,fired])=>{
+      if(fired){
         f.comboBuffer.push({ name, time:now });
         while(f.comboBuffer.length && now - f.comboBuffer[0].time > 1400) f.comboBuffer.shift();
         checkSpecial(side, f, now);
@@ -1309,16 +1632,23 @@
     const defEl = isBlue ? redEl : blueEl;
     const defImpactEl = isBlue ? impactRed : impactBlue;
     const now = performance.now();
+
+    // cancel any in-progress normal attack so classes never fight the special's own animation
+    att.atkState = 'none';
+    att.bufferedAttack = null;
+    clearTimeout(att._atkClassTimer);
+    atkEl.classList.remove('attack-punch','attack-kick','attack-lowkick','aerial');
+
     att.specialCooldownUntil = now + SPECIAL_COOLDOWN;
     atkEl.classList.add('special');
     setTimeout(()=>atkEl.classList.remove('special'), 550);
     playSound('special');
-    shakeArena();
+    shakeArena(SHAKE_TIERS.specialWindup);
 
     const range = (kind==='risingKick' ? KICK_RANGE : PUNCH_RANGE) + SPECIAL_RANGE_BONUS;
     const dist = fighterDistance(att, def);
-    if(dist > range) return;              // whiffed — cooldown still spent, real risk/reward
-    if(now < def.invincibleUntil) return;  // dodged via dash i-frames
+    if(dist > range) return;
+    if(now < def.invincibleUntil) return;
 
     const s = att.ch.stats;
     let dmg = kind==='risingKick'
@@ -1327,29 +1657,58 @@
     dmg *= (s.dmgAll||1);
     if(now < att.damageBoostUntil) dmg *= 1.5;
 
-    if(def.shielded){
+    const wasShielded = def.shielded, wasBlocking = def.blocking;
+    const idealGap = (kind==='risingKick' ? 13 : 11) + 2;
+
+    if(wasShielded){
       dmg = 0; def.shielded = false; defEl.classList.remove('shielded');
       playSound('block');
-    } else if(def.blocking){
-      dmg *= 0.45; // specials partially pierce block
+      contactLock(att, def, idealGap);
+      const kbS = (kind==='risingKick'?KICK_KNOCKBACK:PUNCH_KNOCKBACK)*0.6;
+      def.y += isBlue ? -kbS*0.4 : kbS*0.4;
+      att.y += isBlue ?  kbS*1.2 : -kbS*1.2;
+      clampFighter(def); clampFighter(att);
+      pulseClass(defEl,'blockBrace',300);
+      pulseClass(atkEl,'recoilBack',300);
+    } else if(wasBlocking){
+      dmg *= 0.45; // specials partially pierce a bent guard
       playSound('block');
+      contactLock(att, def, idealGap);
+      const kbS = (kind==='risingKick'?KICK_KNOCKBACK:PUNCH_KNOCKBACK)*0.5;
+      def.y += isBlue ? -kbS*0.35 : kbS*0.35;
+      att.y += isBlue ?  kbS*0.9 : -kbS*0.9;
+      clampFighter(def); clampFighter(att);
+      pulseClass(defEl,'blockBrace',260);
+      pulseClass(atkEl,'recoilBack',220);
+    } else {
+      contactLock(att, def, idealGap);
     }
 
     def.health = Math.max(0, def.health - dmg);
     att.hits++;
     let kb = (kind==='risingKick' ? KICK_KNOCKBACK*1.8 : PUNCH_KNOCKBACK*2.2) * (s.knockback||1);
-    if(def.blocking) kb *= 0.5;
+    if(wasBlocking) kb *= 0.5;
     def.x += isBlue ? kb : -kb;
     clampFighter(def);
 
+    defImpactEl.style.setProperty('--impactScale', '1.7');
     defEl.classList.add('hitflash');
     defImpactEl.textContent = '🌟';
     defImpactEl.classList.remove('show'); void defImpactEl.offsetWidth; defImpactEl.classList.add('show');
     setTimeout(()=>defEl.classList.remove('hitflash'), 320);
 
     const comboEl = isBlue ? comboBlueEl : comboRedEl;
+    comboEl.style.setProperty('--comboScale', '1.6');
     comboEl.textContent = kind==='risingKick' ? '⤒ RISING KICK!' : '💥 RUSH COMBO!';
     comboEl.classList.remove('show'); void comboEl.offsetWidth; comboEl.classList.add('show');
+
+    shakeArena(SHAKE_TIERS.special);
+    const pos = screenPos(def);
+    spawnSparks(pos.left, pos.top, '#ffcf4d', SPARK_TIERS.special, 1.6);
+    spawnStreaks(pos.left, pos.top, '#ffcf4d', STREAK_TIERS.special, 1.6);
+    if(!def.jumping && !wasShielded && !wasBlocking) pulseClass(defEl,'sq-special', SQUASH_DURATIONS['sq-special']);
+    if(!att.jumping) pulseClass(atkEl,'atk-surge',260);
+    triggerHitStop(HITSTOP_TIERS.special);
 
     updateHealthBars();
     if(def.health<=0 && state.roundActive){
@@ -1372,7 +1731,7 @@
   function spawnPowerup(){
     const pt = POWERUP_TYPES[Math.floor(Math.random()*POWERUP_TYPES.length)];
     const x = randRange(38,62), y = randRange(40,60);
-    state.powerup = { type:pt.type, x, y }; // spawn near ring center
+    state.powerup = { type:pt.type, x, y };
     powerupEl.textContent = pt.icon;
     powerupEl.style.left = x + '%';
     powerupEl.style.top = (12 + (y/100)*68) + '%';
@@ -1422,79 +1781,138 @@
     let jx = 0, jy = 0;
     if(dist > 24){
       const m = Math.hypot(dxRaw,dyRaw)||1;
-      jx = dxRaw/m; jy = dyRaw/m; // move directly toward blue
+      jx = dxRaw/m; jy = dyRaw/m;
     } else if(dist < 10 && Math.random()<0.3){
       jx = -Math.sign(dxRaw)*0.6;
     }
     joy.red.x = jx; joy.red.y = jy;
 
     const r = Math.random();
-    input.redPunch = false; input.redKick = false; input.redBlock = false; input.redJump = false;
+    input.redBlock = false; input.redJump = false;
     const inRange = dist <= KICK_RANGE+2;
     if(inRange && r<0.14){
-      // bend into a low sweep
-      input.redBlock = true; input.redKick = true;
+      input.redBlock = true; aiTap('redKick');
     } else if(inRange && r<0.40){
-      input.redKick = true;
+      aiTap('redKick');
     } else if(dist <= PUNCH_RANGE+2 && r<0.6){
-      input.redPunch = true;
+      aiTap('redPunch');
     } else if(r>0.9 && dist < PUNCH_RANGE+4){
-      input.redBlock = true; // plain dodge, no follow-up
+      input.redBlock = true;
     }
     if(Math.random()<0.05){
-      input.redJump = true;
-      if(inRange) input.redKick = true; // occasional jump attack
+      aiTap('redJump', 420);
+      if(inRange) aiTap('redKick');
     }
     if(Math.random()<0.03) triggerDash('red', {x:jx||0, y:jy||-1});
   }
 
-  // ================= Main loop =================
-  function throwAttacks(f, el, side, opp, oppEl, oppSide, oppImpactEl, isBlue){
-    const p = input[side+'Punch'], k = input[side+'Kick'];
-    if(f.blocking){
-      // bent down: no punch option, but kick becomes a low sweep
-      if(k) attemptAttack(f, el, side, opp, oppEl, oppSide, oppImpactEl, 'kick', isBlue, 'low');
+  // ================= Momentum, ground friction & foot-planting =================
+  // Movement runs on velocity (f.vx/f.vy) rather than snapping to input directly.
+  // Every frame: friction bleeds off existing velocity (the "pushing against the canvas"
+  // resistance), then velocity eases toward the joystick's target speed. If the new input
+  // direction sharply opposes current velocity (a hard reversal), the fighter enters a
+  // brief "planting" state — a foot-plant weight-transfer window where acceleration is
+  // heavily damped, so direction changes read as a real pivot rather than an instant flip.
+  function moveFighter(f, side, now, el){
+    const j = joy[side];
+    const speedMult = (f.ch.stats.speed||1) * (now < f.speedBoostUntil ? 1.6 : 1);
+    const bending = f.blocking;
+    const dashing = now < f.dashUntil;
+
+    if(dashing){
+      const dashStart = f.dashUntil - DASH_DURATION;
+      const progress = Math.min(1, Math.max(0, (now - dashStart) / DASH_DURATION));
+      const burstCurve = Math.max(0.55, 1.85 - 1.05*progress);
+      const dashMult = (f.ch.stats.dashMult||1) * (f.ch.stats.dashRangeMult||1) * burstCurve;
+      f.x += f.dashDir.x * DASH_POWER * dashMult;
+      f.y += f.dashDir.y * DASH_POWER * dashMult;
+      f.vx = f.dashDir.x * 3; f.vy = f.dashDir.y * 3;
+      f.pivoting = false;
       return;
     }
-    const variant = f.jumping ? 'aerial' : 'standard';
-    if(p) attemptAttack(f, el, side, opp, oppEl, oppSide, oppImpactEl, 'punch', isBlue, variant);
-    if(k) attemptAttack(f, el, side, opp, oppEl, oppSide, oppImpactEl, 'kick', isBlue, variant);
+
+    const targetVx = bending ? (j.x * MOVE_SPEED * speedMult) : (j.x * MOVE_SPEED * speedMult * 0.7);
+    const targetVy = bending ? 0 : (j.y * MOVE_SPEED * speedMult);
+
+    const velMag = Math.hypot(f.vx, f.vy);
+    const inputMag = Math.hypot(j.x, j.y);
+    let pivoting = now < (f.plantUntil||0);
+    if(!pivoting && velMag>0.25 && inputMag>0.4){
+      const dot = (f.vx*j.x + f.vy*j.y) / ((velMag*inputMag) || 1);
+      if(dot < PIVOT_DOT_THRESHOLD){
+        pivoting = true;
+        f.plantUntil = now + PIVOT_LOCK_MS;
+        if(el) el.style.setProperty('--plantDir', f.vx>=0 ? 1 : -1);
+      }
+    }
+    f.pivoting = pivoting;
+
+    f.vx *= GROUND_FRICTION;
+    f.vy *= GROUND_FRICTION;
+
+    const pivotMult = pivoting ? PIVOT_DECEL_MULT : 1;
+    const accelX = (j.x!==0 ? ACCEL_RATE : DECEL_RATE) * pivotMult;
+    const accelY = ((!bending && j.y!==0) ? ACCEL_RATE : DECEL_RATE) * pivotMult;
+    f.vx += (targetVx - f.vx) * accelX;
+    f.vy += (targetVy - f.vy) * accelY;
+
+    f.x += f.vx;
+    if(!bending) f.y += f.vy;
   }
 
+  // ================= Main loop =================
   function loop(){
     if(state.matchOver){ loopId = requestAnimationFrame(loop); return; }
     if(state.roundActive && !state.paused){
       const now = performance.now();
-      keyboardJoyOverride();
 
+      // Hit-stop gate: skip all logic (movement, attack-state, buffering) while a heavy
+      // hit's freeze window is active; the CSS body.hitstop rule pauses in-flight limb
+      // animations in lockstep, so this frame-window IS the "unified coordinate lock."
+      if(now < (state.hitStopUntil||0)){
+        loopId = requestAnimationFrame(loop);
+        return;
+      }
+
+      keyboardJoyOverride();
       if(mode==='ai') updateAI(now);
 
-      recordInputEdges('blue', now);
-      recordInputEdges('red', now);
+      const blueEdges = {
+        jump: input.blueJump && !prevInput.blueJump,
+        punch: input.bluePunch && !prevInput.bluePunch,
+        kick: input.blueKick && !prevInput.blueKick
+      };
+      const redEdges = {
+        jump: input.redJump && !prevInput.redJump,
+        punch: input.redPunch && !prevInput.redPunch,
+        kick: input.redKick && !prevInput.redKick
+      };
+
+      recordInputEdges('blue', now, blueEdges);
+      recordInputEdges('red', now, redEdges);
 
       state.blue.blocking = input.blueBlock && now >= state.blue.dashUntil;
       state.red.blocking = input.redBlock && now >= state.red.dashUntil;
       blueEl.classList.toggle('blocking', state.blue.blocking);
       redEl.classList.toggle('blocking', state.red.blocking);
 
-      moveFighter(state.blue, 'blue', now);
-      moveFighter(state.red, 'red', now);
+      moveFighter(state.blue, 'blue', now, blueEl);
+      moveFighter(state.red, 'red', now, redEl);
+      blueEl.classList.toggle('planting', !!state.blue.pivoting);
+      redEl.classList.toggle('planting', !!state.red.pivoting);
 
       clampFighter(state.blue);
       clampFighter(state.red);
       resolveRingGap();
+
+      updateAttackState(state.blue, blueEl, 'blue', state.red, redEl, 'red', impactRed, true, now, blueEdges);
+      updateAttackState(state.red, redEl, 'red', state.blue, blueEl, 'blue', impactBlue, false, now, redEdges);
+
       positionFighters();
+      updateDashTrails(now);
 
       if(input.blueJump) tryJump(blueEl, state.blue);
       if(input.redJump) tryJump(redEl, state.red);
-
-      throwAttacks(state.blue, blueEl, 'blue', state.red, redEl, 'red', impactRed, true);
-      throwAttacks(state.red, redEl, 'red', state.blue, blueEl, 'blue', impactBlue, false);
-
-      if(state.blue.cooldownPunch>0) state.blue.cooldownPunch -= 16;
-      if(state.blue.cooldownKick>0) state.blue.cooldownKick -= 16;
-      if(state.red.cooldownPunch>0) state.red.cooldownPunch -= 16;
-      if(state.red.cooldownKick>0) state.red.cooldownKick -= 16;
 
       updatePowerupCollection();
 
@@ -1504,35 +1922,6 @@
     loopId = requestAnimationFrame(loop);
   }
 
-  // Joystick maps directly to the shared ring plane: pushing the stick forward/back
-  // (physical up/down) drives y — the primary front/back approach lane running the long
-  // side of the screen. Pushing left/right drives x — a narrow strafe band. Both work
-  // identically for Blue and Red since Red's whole control zone is already rotated 180°,
-  // so "forward" always means "toward the opponent" for whoever is pushing the stick.
-  function moveFighter(f, side, now){
-    const j = joy[side];
-    const speedMult = (f.ch.stats.speed||1) * (now < f.speedBoostUntil ? 1.6 : 1);
-    const bending = f.blocking;
-    const dashing = now < f.dashUntil;
-
-    if(dashing){
-      const dashMult = (f.ch.stats.dashMult||1) * (f.ch.stats.dashRangeMult||1);
-      f.x += f.dashDir.x * 2.6 * dashMult;
-      f.y += f.dashDir.y * 2.6 * dashMult;
-      return;
-    }
-    if(bending){
-      // ducked down: can still strafe sideways, but can't advance or retreat
-      f.x += j.x * MOVE_SPEED * speedMult;
-      return;
-    }
-    f.x += j.x * MOVE_SPEED * speedMult * 0.7;   // strafe is deliberately a bit slower than approach
-    f.y += j.y * MOVE_SPEED * speedMult;
-  }
-
-  // Attempt a hard orientation lock (works when launched as an installed/standalone PWA
-  // on Android Chrome). The CSS media-query trick above covers browsers/OSes (like iOS
-  // Safari) where this API isn't available at all.
   try{
     if(screen.orientation && screen.orientation.lock){
       screen.orientation.lock('portrait').catch(()=>{});
