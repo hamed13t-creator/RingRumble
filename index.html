@@ -144,6 +144,12 @@
   .floor{ position:absolute; left:0; right:0; bottom:0; height:8%; background:linear-gradient(#3a2a30,#241820); border-top:2px solid #4a3a44; }
 
   .fighter{ position:absolute; width:15%; min-width:44px; text-align:center; will-change:left,top; z-index:5; }
+  /* JS-only wrapper for procedural lean + spine-ripple rotation. No CSS
+     @keyframes or class rule EVER targets .leanWrap's transform, so the JS
+     system below can never collide with any of the CSS-driven pose rules
+     (blocking, attack keyframes, idle breathing, etc.) that live one level
+     deeper on .rigWrap and its children. */
+  .leanWrap{ transform-origin:50% 62%; }
   .rigWrap{ transition:transform .1s ease; }
   .spinWrap{ transform-origin:50% 55%; }
   .fighter.red .spinWrap{ transform:rotate(180deg); }
@@ -167,7 +173,7 @@
     0%,100%{ transform:translateY(0) scale(1,1) rotate(0deg); }
     50%{ transform:translateY(-1.5px) scale(1.015,0.985) rotate(0.6deg); }
   }
-  .fighter:not(.jump):not(.attack-punch):not(.attack-kick):not(.attack-lowkick):not(.blocking):not(.dashing):not(.hitflash):not(.special):not(.sq-light):not(.sq-heavy):not(.sq-special):not(.sq-ko):not(.atk-surge):not(.planting):not(.recoilBack):not(.blockBrace) .rigWrap{
+  .fighter:not(.jump):not(.attack-punch):not(.attack-kick):not(.attack-lowkick):not(.blocking):not(.dashing):not(.hitflash):not(.special):not(.sq-light):not(.sq-heavy):not(.sq-special):not(.sq-ko):not(.atk-surge):not(.planting):not(.recoilBack):not(.blockBrace):not(.attack-slidekick):not(.attack-launcher):not(.attack-airpunch):not(.launched) .rigWrap{
     animation: idleBreathe 2.4s ease-in-out infinite;
   }
   @keyframes blockTension{
@@ -184,12 +190,8 @@
   .fighter.jump .legBackUpper{ transform:rotate(30deg); }
   .fighter.jump .legBackLower{ transform:rotate(-42deg); }
 
-  /* ---- Punch: the arm (armFrontUpper/armFrontLower) is NO LONGER animated by CSS
-     keyframes — it's driven every frame by a real 2-bone IK solver in JS (see
-     TwoBoneIK / updateIKPunch below), which computes a live shoulder->elbow->hand
-     bend toward a moving target and writes rotate() directly onto these two
-     groups each frame. Torso lean and motion lines stay on the simple CSS
-     keyframe system below since they aren't IK-driven joints in this pass. ---- */
+  /* ---- Punch: arm is IK-driven every frame by JS (updateIKPunch), not by
+     CSS keyframes. Torso lean and motion lines stay CSS-driven. ---- */
   @keyframes punchTorso{
     0%,100%{ transform:rotate(0deg) translateX(0) scale(1,1); }
     16%{ transform:rotate(6deg) translateX(-1.5px) scale(0.97,1.03); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
@@ -202,12 +204,9 @@
   .fighter.attack-punch .torsoG{ animation:punchTorso .30s linear; }
   .fighter.attack-punch .punchLines{ animation:punchLinesFade .30s ease-out; }
 
-  /* ---- IK overreach cue: when the punch's IK target sits far enough out that the
-     solver has to soft-overstretch past the arm's natural reach (selling "reaching
-     with everything"), the forearm gets a brief energized glow rather than a
-     literal elongated stroke — the rig's bones are fixed-length drawn paths, not
-     per-frame redrawn geometry, so true elastic lengthening of the stroke itself
-     is out of scope for this pass. ---- */
+  /* ---- IK overreach cue: forearm glow when the solver soft-stretches
+     past natural arm length (used by punch, launcher's uppercut arm, and
+     airPunch's finisher reach). ---- */
   .fighter.ikStretch .armFrontLower{ filter:drop-shadow(0 0 6px currentColor) brightness(1.3); }
 
   /* ---- Kick ---- */
@@ -273,6 +272,67 @@
   .fighter.attack-lowkick .legFrontLower{ animation:lowSweepShin .38s linear; }
   .fighter.attack-lowkick .kickLines{ animation:kickLinesFade .38s ease-out; }
   .fighter.attack-lowkick .torsoG{ animation:lowSweepTorso .38s linear; }
+
+  /* ---- Slide kick: flatter, longer-reaching leg extension plus a low
+     forward-lean torso. Root motion (the actual world-position slide) is
+     handled in JS, not here. ---- */
+  @keyframes slideKickThigh{
+    0%{ transform:rotate(-6deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    30%{ transform:rotate(-38deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    55%{ transform:rotate(-88deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    100%{ transform:rotate(-70deg); animation-timing-function:ease-out; }
+  }
+  @keyframes slideKickShin{
+    0%{ transform:rotate(4deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    30%{ transform:rotate(-8deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    55%{ transform:rotate(-30deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    100%{ transform:rotate(-22deg); animation-timing-function:ease-out; }
+  }
+  @keyframes slideKickTorso{
+    0%{ transform:translateY(4px) rotate(2deg); }
+    55%{ transform:translateY(10px) rotate(-6deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    100%{ transform:translateY(8px) rotate(-4deg); }
+  }
+  .fighter.attack-slidekick .legFrontUpper{ animation:slideKickThigh .28s linear forwards; }
+  .fighter.attack-slidekick .legFrontLower{ animation:slideKickShin .28s linear forwards; }
+  .fighter.attack-slidekick .torsoG{ animation:slideKickTorso .28s ease-out forwards; }
+  .fighter.attack-slidekick .kickLines{ animation:kickLinesFade .3s ease-out; }
+
+  /* ---- Launcher: explosive rising-uppercut leg drive; arm is IK-driven. ---- */
+  @keyframes launcherThigh{
+    0%{ transform:rotate(10deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    30%{ transform:rotate(40deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    60%{ transform:rotate(-140deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    100%{ transform:rotate(-40deg); animation-timing-function:ease-out; }
+  }
+  @keyframes launcherShin{
+    0%{ transform:rotate(-6deg); animation-timing-function:cubic-bezier(.4,0,.2,1); }
+    30%{ transform:rotate(64deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    60%{ transform:rotate(-96deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+    100%{ transform:rotate(-30deg); animation-timing-function:ease-out; }
+  }
+  @keyframes launcherTorso{
+    0%,100%{ transform:translateY(0) rotate(0deg); }
+    60%{ transform:translateY(-6px) rotate(-14deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+  }
+  .fighter.attack-launcher .legFrontUpper{ animation:launcherThigh .34s linear forwards; }
+  .fighter.attack-launcher .legFrontLower{ animation:launcherShin .34s linear forwards; }
+  .fighter.attack-launcher .torsoG{ animation:launcherTorso .34s linear forwards; }
+  .fighter.attack-launcher .rig{ filter:drop-shadow(0 0 14px var(--gold)) brightness(1.3); }
+
+  /* ---- Air punch: no torso/leg keyframes — the arm is IK-driven. This
+     class only supplies the finisher glow. ---- */
+  .fighter.attack-airpunch .rig{ filter:drop-shadow(0 0 18px var(--gold)) brightness(1.4); }
+
+  /* ---- Launched: the DEFENDER's reaction pose when hit by launcher. ---- */
+  @keyframes launchedPop{
+    0%{ transform:translateY(0) rotate(0deg); animation-timing-function:cubic-bezier(0.05,0.9,0.1,1.0); }
+    35%{ transform:translateY(-34px) rotate(-18deg); animation-timing-function:ease-out; }
+    75%{ transform:translateY(-30px) rotate(-8deg); }
+    100%{ transform:translateY(0) rotate(0deg); animation-timing-function:cubic-bezier(.34,1.56,.64,1); }
+  }
+  .fighter.launched .rigWrap{ animation:launchedPop 0.52s cubic-bezier(.36,.07,.19,.97) forwards; }
+  .fighter.launched .rig{ filter:drop-shadow(0 0 10px #fff) brightness(1.2); }
 
   .fighter.aerial .rig{ filter:drop-shadow(0 0 12px var(--gold)) brightness(1.25); }
   .dashLines{ transition:opacity .1s; }
@@ -478,7 +538,7 @@
       <div class="charGrid" id="redCharGrid"></div>
     </div>
     <button id="fightBtn">FIGHT!</button>
-    <div class="hint">Best of 3 rounds &middot; Joystick: front/back to close or retreat, strafe to sidestep (double-tap a direction to dash) &middot; JUMP clears low sweeps &amp; adds an aerial strike &middot; BEND dodges high attacks &amp; turns KICK into a low sweep &middot; Grab power-ups at ring center &middot; Specials: Jump→Kick→Kick (Rising Kick) &middot; Punch→Punch→Kick (Rush Combo) &middot; Pause anytime from the ❚❚ button</div>
+    <div class="hint">Best of 3 rounds &middot; Joystick: front/back to close or retreat, strafe to sidestep (double-tap a direction to dash) &middot; JUMP clears low sweeps &amp; adds an aerial strike &middot; BEND dodges high attacks &amp; turns KICK into a low sweep &middot; Grab power-ups at ring center &middot; Specials: Jump→Kick→Kick (Rising Kick) &middot; Punch→Punch→Kick (Rush Combo) &middot; Dash→Kick chains into Slide Kick→Launcher→Air Punch &middot; Pause anytime from the ❚❚ button</div>
   </div>
 </div>
 
@@ -521,10 +581,12 @@
           <div id="blue" class="fighter blue">
             <div class="comboPopup" id="comboBlue"></div>
             <div class="shieldBadge">🛡</div>
-            <div class="rigWrap">
-              <div class="spinWrap">
-                <div class="tiltWrap">
-                  <div class="svgHolder"></div>
+            <div class="leanWrap">
+              <div class="rigWrap">
+                <div class="spinWrap">
+                  <div class="tiltWrap">
+                    <div class="svgHolder"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -535,10 +597,12 @@
           <div id="red" class="fighter red">
             <div class="comboPopup" id="comboRed"></div>
             <div class="shieldBadge">🛡</div>
-            <div class="rigWrap">
-              <div class="spinWrap">
-                <div class="tiltWrap">
-                  <div class="svgHolder"></div>
+            <div class="leanWrap">
+              <div class="rigWrap">
+                <div class="spinWrap">
+                  <div class="tiltWrap">
+                    <div class="svgHolder"></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -708,12 +772,7 @@
     }catch(e){ return hex; }
   }
 
-  // ================= Procedural 2-bone IK (punch arm) =================
-  // A minimal, dependency-free two-bone solver (shoulder->elbow->hand). Given a
-  // root, a target, and a pole vector (which side to bend the joint toward), it
-  // returns the two absolute joint angles via the law of cosines. Soft overreach
-  // (maxStretch) lets the solver reach slightly past the arm's natural length
-  // under tension instead of just clamping dead at max range.
+  // ================= Procedural 2-bone IK (punch / launcher / airPunch arm) =================
   class TwoBoneIK{
     constructor(len1, len2, opts={}){
       this.len1 = len1; this.len2 = len2;
@@ -747,47 +806,25 @@
     }
   }
 
-  // Bone geometry lifted directly from the rig's own drawn coordinates —
-  // shoulder(30,27) -> elbow(37,42) -> hand(41,29), same viewBox every character
-  // shares — so the IK's internal triangle matches what's actually on screen.
-  // Validated: solving toward the REST hand position reproduces exactly 0deg on
-  // both segments (i.e. rediscovers the idle guard pose), the standard
-  // correctness check for a 2-bone rig.
   const ARM_SHOULDER = { x:30, y:27 };
   const ARM_LEN1 = Math.hypot(37-30, 42-27);
   const ARM_LEN2 = Math.hypot(41-37, 29-42);
   const ARM_REST_UPPER = Math.atan2(42-27, 37-30);
   const ARM_REST_LOWER = Math.atan2(29-42, 41-37);
   const armIK = new TwoBoneIK(ARM_LEN1, ARM_LEN2, { maxStretch:1.18, minBend:0.08 });
-  // Pole sits below+forward of the shoulder so the elbow tucks downward through
-  // the swing, matching the rig's own rest-pose silhouette (elbow sits below
-  // both shoulder and hand) — confirmed by the rest-pose reproduction check above.
   const ARM_POLE = { x: ARM_SHOULDER.x+8, y: ARM_SHOULDER.y+34 };
 
   function solveArmAngles(target){
     const { upperAngle, lowerAngle, stretch } = armIK.solve(ARM_SHOULDER, target, ARM_POLE);
     const upperDeg = (upperAngle - ARM_REST_UPPER) * 180/Math.PI;
-    // armFrontLower is a CHILD of armFrontUpper in the SVG (nested groups), so its
-    // own rotate() composes ON TOP OF the parent's — subtract the parent's applied
-    // delta so the two rotations sum to the IK's absolute lowerAngle rather than
-    // double-applying the upper segment's swing to the forearm.
     const lowerDeg = ((lowerAngle - ARM_REST_LOWER) * 180/Math.PI) - upperDeg;
     return { upperDeg, lowerDeg, stretch };
   }
 
-  // Easing helpers for authoring the punch's hand-target path.
   function easeInOutQuad(x){ return x<0.5 ? 2*x*x : 1-Math.pow(-2*x+2,2)/2; }
   function easeOutExpo(x){ return x>=1 ? 1 : 1-Math.pow(2,-10*x); }
   function easeOutBack(x){ const c1=1.70158, c3=c1+1; return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2); }
 
-  // Target HAND position (local rig coords, same frame as ARM_SHOULDER) over the
-  // punch's 0..1 lifetime: guard -> tight chamber near the chin -> maximal reach
-  // (deliberately just past the arm's natural length, so the solver's soft-
-  // overstretch kicks in right at the peak) -> elastic settle -> back to guard.
-  // Every keypoint was checked by hand to share the same IK bend-sign as the
-  // rest pose (see ARM_POLE note) so the elbow never pops to the wrong side
-  // mid-swing — the first version of this pulled the chamber pose back behind
-  // the shoulder line, which DID flip the sign; this one stays in front of it.
   const PUNCH_HAND_KEYS = [
     { t:0.00, x:41, y:29 },
     { t:0.16, x:33, y:22 },
@@ -812,12 +849,39 @@
     return { x: keys[keys.length-1].x, y: keys[keys.length-1].y };
   }
 
-  // Runs the IK solve for a fighter's active punch and writes the resulting
-  // angles directly onto the arm groups every frame — this is the bridge step
-  // swapping the old CSS keyframe arm animation for a live procedural solve.
-  // Naturally respects hit-stop because it's only ever called from inside
-  // loop()'s non-frozen branch, same as every other per-frame system, so a
-  // freeze mid-punch holds the IK pose exactly like everything else.
+  function sampleKeys(keys, t){
+    for(let i=0;i<keys.length-1;i++){
+      const a=keys[i], b=keys[i+1];
+      if(t>=a.t && t<=b.t){
+        const local = (t-a.t)/((b.t-a.t)||1);
+        const eased = i===2 ? easeOutBack(local) : easeInOutQuad(local);
+        return { x: a.x+(b.x-a.x)*eased, y: a.y+(b.y-a.y)*eased };
+      }
+    }
+    return { x: keys[keys.length-1].x, y: keys[keys.length-1].y };
+  }
+  // launcher's uppercutting arm target: deep low chamber -> explosive upward drive.
+  function launcherHandTarget(t){
+    return sampleKeys([
+      { t:0.00, x:41, y:29 },
+      { t:0.20, x:30, y:40 },
+      { t:0.55, x:48, y:-12 },
+      { t:0.78, x:44, y:4 },
+      { t:1.00, x:41, y:29 }
+    ], t);
+  }
+  // airPunch: faster, longer, harder-committing finisher reach (intentionally exceeds
+  // the arm's natural length so the IK solver's soft-overstretch + .ikStretch glow kick in).
+  function airPunchHandTarget(t){
+    return sampleKeys([
+      { t:0.00, x:41, y:29 },
+      { t:0.14, x:30, y:18 },
+      { t:0.38, x:74, y:10 },
+      { t:0.55, x:58, y:18 },
+      { t:1.00, x:41, y:29 }
+    ], t);
+  }
+
   function updateIKPunch(f, el, now){
     const upperEl = el.querySelector('.armFrontUpper');
     const lowerEl = el.querySelector('.armFrontLower');
@@ -836,12 +900,175 @@
       f.ikPunch = null;
       return;
     }
-    const target = punchHandTarget(Math.max(0,t));
+    const targetFn = f.ikPunch.targetFn || punchHandTarget;
+    const target = targetFn(Math.max(0,t));
     const { upperDeg, lowerDeg, stretch } = solveArmAngles(target);
     upperEl.style.transform = `rotate(${upperDeg.toFixed(2)}deg)`;
     lowerEl.style.transform = `rotate(${lowerDeg.toFixed(2)}deg)`;
     el.classList.toggle('ikStretch', stretch > 1.02);
   }
+
+  // ================= Procedural lean, spine-ripple, pushback =================
+  // Spring-damped torso lean: eases toward a target angle driven by forward/
+  // strafe velocity and punch windup, instead of snapping.
+  class LeanController{
+    constructor(opts={}){
+      this.angle = 0; this.velocity = 0;
+      this.stiffness = opts.stiffness ?? 140;
+      this.damping = opts.damping ?? 16;
+      this.maxLean = opts.maxLean ?? 14;
+      this.maxDashLean = opts.maxDashLean ?? 24;
+      this.maxWindupLean = opts.maxWindupLean ?? 10;
+      this.kForward = opts.kForward ?? 9;
+      this.kStrafe = opts.kStrafe ?? 5;
+    }
+    computeTarget(f, isBlue, now){
+      const forwardSpeed = isBlue ? -f.vy : f.vy;
+      const dashing = now < f.dashUntil;
+      const cap = dashing ? this.maxDashLean : this.maxLean;
+      let target = this.kForward*forwardSpeed + this.kStrafe*f.vx;
+      target = Math.max(-cap, Math.min(cap, target));
+      if(f.atkState==='startup' && f.atkType==='punch'){
+        const p = Math.min(1, (now-f.atkPhaseStart)/f.atkStartupMs);
+        target += -this.maxWindupLean * Math.sin(p*Math.PI*0.5);
+      }
+      return target;
+    }
+    step(target, dt){
+      dt = Math.min(dt, 1/30);
+      const accel = -this.stiffness*(this.angle-target) - this.damping*this.velocity;
+      this.velocity += accel*dt;
+      this.angle += this.velocity*dt;
+      return this.angle;
+    }
+  }
+
+  // Coupled damped-oscillator chain (hip/lower-spine -> chest -> neck/head).
+  // An impulse injected anywhere propagates outward with decreasing amplitude,
+  // like a whip crack, instead of every hit reaction looking identical.
+  class SpineRippleSolver{
+    constructor(segments, opts={}){
+      this.n = segments;
+      this.theta = new Float32Array(segments);
+      this.omega = new Float32Array(segments);
+      this.stiffness = opts.stiffness ?? 90;
+      this.damping = opts.damping ?? 9;
+      this.coupling = opts.coupling ?? 55;
+    }
+    applyImpulse(segmentIndex, force){
+      const i = Math.max(0, Math.min(this.n-1, Math.round(segmentIndex)));
+      this.omega[i] += force;
+    }
+    step(dt){
+      dt = Math.min(dt, 1/30);
+      const nextTheta = this.theta.slice();
+      const nextOmega = this.omega.slice();
+      for(let i=0;i<this.n;i++){
+        const neighborPull = (i>0 ? (this.theta[i-1]-this.theta[i]) : 0) + (i<this.n-1 ? (this.theta[i+1]-this.theta[i]) : 0);
+        const accel = -this.stiffness*this.theta[i] - this.damping*this.omega[i] + this.coupling*neighborPull;
+        nextOmega[i] = this.omega[i] + accel*dt;
+        nextTheta[i] = this.theta[i] + nextOmega[i]*dt;
+      }
+      this.theta = nextTheta; this.omega = nextOmega;
+    }
+    getOffsets(){ return this.theta; }
+  }
+
+  // Converts an actual hit (attacker/defender position + tier) into an impulse
+  // magnitude and injection point, so a jab and a haymaker ripple differently.
+  class ImpactRippleController{
+    constructor(segments=3){ this.solver = new SpineRippleSolver(segments, { stiffness:110, damping:10, coupling:60 }); }
+    applyHit(attackerPos, defenderPos, tier, comboMult=1){
+      const dx = defenderPos.x-attackerPos.x, dy = defenderPos.y-attackerPos.y;
+      const impactAngle = Math.atan2(dy,dx);
+      const baseForce = { punch:6, low:8, kick:11, special:18 }[tier] ?? 6;
+      const force = baseForce*comboMult;
+      const sign = Math.sign(Math.cos(impactAngle)) || 1;
+      if(tier==='low'){
+        this.solver.applyImpulse(0, force*sign);
+      } else if(tier==='punch'){
+        this.solver.applyImpulse(1, force*sign*0.7);
+        this.solver.applyImpulse(2, force*sign*0.5);
+      } else {
+        this.solver.applyImpulse(1, force*sign*0.8);
+        this.solver.applyImpulse(2, force*sign*1.0);
+      }
+    }
+    step(dt){ this.solver.step(dt); }
+    getRenderOffsets(){
+      const [hipT, chestT, neckT] = this.solver.getOffsets();
+      return { chestDeg: (chestT*180)/Math.PI, headDeg: (neckT*180)/Math.PI };
+    }
+  }
+
+  // Continuous, decaying separation impulse for block reactions — both fighters
+  // carry a velocity that bleeds off via friction, instead of a one-shot offset.
+  class PushbackImpulse{
+    constructor(opts={}){ this.friction = opts.friction ?? 0.82; this.minVel = opts.minVel ?? 0.01; }
+    applyBlockImpulse(attacker, defender, axis, magnitude, attackerShare=0.55){
+      defender.pvx += axis.x*magnitude*(1-attackerShare);
+      defender.pvy += axis.y*magnitude*(1-attackerShare);
+      attacker.pvx += -axis.x*magnitude*attackerShare;
+      attacker.pvy += -axis.y*magnitude*attackerShare;
+    }
+    step(f){
+      if(Math.hypot(f.pvx,f.pvy) < this.minVel){ f.pvx=0; f.pvy=0; return {dx:0,dy:0}; }
+      const dx=f.pvx, dy=f.pvy;
+      f.pvx *= this.friction; f.pvy *= this.friction;
+      return { dx, dy };
+    }
+  }
+
+  const leanBlue = new LeanController(), leanRed = new LeanController();
+  const rippleBlue = new ImpactRippleController(), rippleRed = new ImpactRippleController();
+  const pushback = new PushbackImpulse();
+  let lastFrameTime = performance.now();
+
+  function applyPushbackOnBlock(att, def, knockbackBase){
+    const axisX = (def.x-att.x) || 0.01, axisY = (def.y-att.y) || 0.01;
+    const axisLen = Math.hypot(axisX,axisY) || 1;
+    pushback.applyBlockImpulse(att, def, { x:axisX/axisLen, y:axisY/axisLen }, knockbackBase*1.6);
+  }
+
+  // ================= Generic attack-buffering / cancel graph =================
+  class ComboChainController{
+    constructor(chainDef){ this.chainDef = chainDef; this.buffered = null; }
+    tryBuffer(currentMove, t, requestedMove, hitConfirmed){
+      const def = this.chainDef[currentMove];
+      if(!def || !def.cancelInto.includes(requestedMove)) return false;
+      const [w0,w1] = def.cancelWindow;
+      const inWindow = t>=w0 && t<=w1;
+      const confirmOK = def.cancelOnHitConfirm ? hitConfirmed : true;
+      if(inWindow && confirmOK){ this.buffered = requestedMove; return true; }
+      return false;
+    }
+    consume(){ const next=this.buffered; this.buffered=null; return next; }
+    clear(){ this.buffered = null; }
+  }
+
+  function buildAggroChainDef(){
+    return {
+      dash:      { cancelWindow:[0.5,1.0],  cancelInto:['slideKick'] },
+      slideKick: { cancelWindow:[0.34,0.8], cancelInto:['launcher'], cancelOnHitConfirm:true },
+      launcher:  { cancelWindow:[0.34,0.8], cancelInto:['airPunch'], cancelOnHitConfirm:true },
+      airPunch:  { cancelWindow:[0,0],      cancelInto:[] }
+    };
+  }
+  // Maps a fighter's aggro startup/active/recovery phase to a single 0..1
+  // progress value against fixed phase boundaries, so ComboChainController's
+  // normalized-window API works even though recovery duration varies by outcome.
+  function aggroProgress(f, now){
+    const T0=0.34, T1=0.5;
+    if(f.aggroState==='startup') return (now-f.aggroPhaseStart)/f.aggroTiming.startup*T0;
+    if(f.aggroState==='active') return T0 + ((now-f.aggroActiveStart)/f.aggroTiming.active)*(T1-T0);
+    if(f.aggroState==='recovery'){
+      const dur = f.aggroRecoveryEnd - f.aggroRecoveryStart;
+      const p = dur>0 ? Math.min(1,(now-f.aggroRecoveryStart)/dur) : 1;
+      return T1 + p*(1-T1);
+    }
+    return 0;
+  }
+  const aggroChain = { blue: new ComboChainController(buildAggroChainDef()), red: new ComboChainController(buildAggroChainDef()) };
 
   // ================= DOM refs =================
   const selectScreen = document.getElementById('selectScreen');
@@ -925,6 +1152,24 @@
     }
     return base;
   }
+
+  // ---- Aggro chain: slide kick -> launcher -> air punch ----
+  const AGGRO_TIMING = {
+    slideKick: { startup:90,  active:90, recoveryBase:{ hit:180, block:260, whiff:420 } },
+    launcher:  { startup:110, active:70, recoveryBase:{ hit:220, block:320, whiff:480 } },
+    airPunch:  { startup:80,  active:60, recoveryBase:{ hit:200, block:300, whiff:380 } }
+  };
+  const AGGRO_STATS = {
+    slideKick: { range:24, damage:12, knockback:2 },
+    launcher:  { range:18, damage:15, knockback:4 },
+    airPunch:  { range:17, damage:24, knockback:10 }
+  };
+  const AGGRO_HITSTOP = { slideKick:140, launcher:170, airPunch:250 };
+  const AGGRO_SHAKE   = { slideKick:2.0, launcher:2.6, airPunch:3.8 };
+  const AGGRO_SPARKS  = { slideKick:20,  launcher:24,  airPunch:32 };
+  const AGGRO_STREAKS = { slideKick:3,   launcher:5,   airPunch:7 };
+  const SLIDE_DISTANCE = 11;
+  const LAUNCH_HOLD_MS = 520;
 
   // ================= Select screen state =================
   let blueKey = 'boxer', redKey = 'ninja', mode = '2p';
@@ -1044,12 +1289,16 @@
       charKey, ch,
       x: 50, y: homeSide==='blue' ? 82 : 18,
       vx: 0, vy: 0, pivoting:false, plantUntil:0,
+      pvx: 0, pvy: 0,
       health: MAX_HEALTH * (s.health||1),
       maxHealth: MAX_HEALTH * (s.health||1),
       hits:0, combo:0, lastHitTime:-99999,
       atkState:'none', atkType:null, atkVariant:null, atkPhaseStart:0,
       atkStartupMs:0, atkActiveMs:0, atkActiveStart:0, atkRecoveryEnd:0,
       atkTiming:null, atkOutcome:null, bufferedAttack:null, _atkClassTimer:null,
+      aggroState:'none', aggroType:null, aggroPhaseStart:0, aggroTiming:null,
+      aggroActiveStart:0, aggroRecoveryStart:0, aggroRecoveryEnd:0, aggroOutcome:null,
+      aggroSlideStartY:0, launchedUntil:0, _aggroClassTimer:null,
       blocking:false, jumping:false,
       speedBoostUntil:0, damageBoostUntil:0, shielded:false,
       dashUntil:0, dashCooldownUntil:0, invincibleUntil:0, dashDir:{x:0,y:0},
@@ -1172,6 +1421,7 @@
   function triggerDash(side, dir){
     if(state.matchOver || !state.roundActive) return;
     const f = side==='blue' ? state.blue : state.red;
+    if(f.aggroState !== 'none') return;
     const now = performance.now();
     if(now < f.dashCooldownUntil) return;
     f.dashUntil = now + DASH_DURATION;
@@ -1256,23 +1506,34 @@
   }
 
   function startRound(){
-    if(state.blue) clearTimeout(state.blue._atkClassTimer);
-    if(state.red) clearTimeout(state.red._atkClassTimer);
+    if(state.blue){ clearTimeout(state.blue._atkClassTimer); clearTimeout(state.blue._aggroClassTimer); }
+    if(state.red){ clearTimeout(state.red._atkClassTimer); clearTimeout(state.red._aggroClassTimer); }
     state.blue = newFighter(blueKey,'blue');
     state.red = newFighter(redKey,'red');
     state.roundTime = ROUND_TIME;
     timerEl.textContent = state.roundTime;
     clearPowerup();
+
+    aggroChain.blue.clear(); aggroChain.red.clear();
+    leanBlue.angle = 0; leanBlue.velocity = 0;
+    leanRed.angle = 0; leanRed.velocity = 0;
+    rippleBlue.solver.theta.fill(0); rippleBlue.solver.omega.fill(0);
+    rippleRed.solver.theta.fill(0); rippleRed.solver.omega.fill(0);
+    lastFrameTime = performance.now();
+
     positionFighters();
     updateHealthBars();
     [blueEl, redEl].forEach(el=>{
       el.classList.remove('jump','attack-punch','attack-kick','attack-lowkick','aerial','hitflash',
         'blocking','dashing','shielded','special','sq-light','sq-heavy','sq-special','sq-ko',
-        'atk-surge','planting','blockBrace','recoilBack','ikStretch');
+        'atk-surge','planting','blockBrace','recoilBack','ikStretch',
+        'attack-slidekick','attack-launcher','attack-airpunch','launched');
       const upperEl = el.querySelector('.armFrontUpper');
       const lowerEl = el.querySelector('.armFrontLower');
       if(upperEl) upperEl.style.transform='';
       if(lowerEl) lowerEl.style.transform='';
+      const lw = el.querySelector('.leanWrap');
+      if(lw) lw.style.transform='';
     });
     state.roundActive = false;
 
@@ -1317,12 +1578,14 @@
     if(wasKO && winner){
       const loser = winner==='blue' ? state.red : state.blue;
       const loserEl = winner==='blue' ? redEl : blueEl;
+      const winnerFighter = winner==='blue' ? state.blue : state.red;
       const pos = screenPos(loser);
       shakeArena(SHAKE_TIERS.ko);
       spawnSparks(pos.left, pos.top, '#ffffff', SPARK_TIERS.ko, 2.1);
       spawnStreaks(pos.left, pos.top, '#ffcf4d', STREAK_TIERS.ko, 1.8);
       pulseClass(loserEl, 'hitflash', 560);
       if(!loser.jumping) pulseClass(loserEl, 'sq-ko', 560);
+      (winner==='blue' ? rippleRed : rippleBlue).applyHit({x:winnerFighter.x,y:winnerFighter.y},{x:loser.x,y:loser.y}, 'special', 2);
       koFlashEl.classList.remove('show'); void koFlashEl.offsetWidth; koFlashEl.classList.add('show');
       triggerHitStop(HITSTOP_TIERS.ko);
       showBanner(text, 1200, ()=>{
@@ -1492,7 +1755,8 @@
 
   const AFTERIMAGE_STRIP_CLASSES = ['hitflash','attack-punch','attack-kick','attack-lowkick','aerial',
     'special','blocking','jump','dashing','shielded','sq-light','sq-heavy','sq-special','sq-ko',
-    'atk-surge','planting','blockBrace','recoilBack'];
+    'atk-surge','planting','blockBrace','recoilBack',
+    'attack-slidekick','attack-launcher','attack-airpunch','launched'];
   function spawnAfterimage(el){
     const ghost = el.cloneNode(true);
     ghost.removeAttribute('id');
@@ -1545,7 +1809,7 @@
     }
   }
 
-  // ================= Normal-attack state machine =================
+  // ================= Normal-attack state machine (punch / kick / low sweep) =================
   function startAttack(f, el, side, type, isBuffered){
     if(type==='punch' && f.blocking) return;
     const variant = f.jumping ? 'aerial' : (f.blocking && type==='kick' ? 'low' : 'standard');
@@ -1571,8 +1835,6 @@
     f._atkClassTimer = setTimeout(()=>{ el.classList.remove('attack-punch','attack-kick','attack-lowkick','aerial'); }, animMs);
 
     if(type==='punch'){
-      // Hand off arm animation to the IK solver for this punch's lifetime — this
-      // replaces what the CSS attack-punch keyframes used to do for the arm.
       f.ikPunch = { startTime: now, durMs: animMs };
     }
   }
@@ -1625,6 +1887,7 @@
       def.y += isBlue ? -blockKb*0.4 : blockKb*0.4;
       att.y += isBlue ?  blockKb*1.1 : -blockKb*1.1;
       clampFighter(def); clampFighter(att);
+      applyPushbackOnBlock(att, def, type==='punch'?PUNCH_KNOCKBACK:KICK_KNOCKBACK);
       pulseClass(defEl,'blockBrace',260);
       pulseClass(atkEl,'recoilBack',260);
     } else {
@@ -1640,6 +1903,8 @@
       let kb = (type==='punch'?PUNCH_KNOCKBACK:KICK_KNOCKBACK) * (att.ch.stats.knockback||1) * (variant==='aerial'?1.4:1);
       def.y += isBlue ? -kb : kb;
       clampFighter(def);
+      const rippleTier = tierKey.startsWith('punch') ? 'punch' : tierKey.startsWith('kick') ? 'kick' : 'low';
+      (isBlue ? rippleRed : rippleBlue).applyHit({x:att.x,y:att.y},{x:def.x,y:def.y}, rippleTier, Math.min(att.combo,3));
     }
 
     const impactScale = Math.min(1 + (att.combo-1)*0.13, 2.0);
@@ -1671,12 +1936,12 @@
 
   function updateAttackState(f, el, side, opp, oppEl, oppSide, oppImpactEl, isBlue, now, edges){
     if(edges.punch && !f.blocking){
-      if(f.atkState==='none') startAttack(f, el, side, 'punch', false);
-      else f.bufferedAttack = 'punch';
+      if(f.atkState==='none' && f.aggroState==='none') startAttack(f, el, side, 'punch', false);
+      else if(f.atkState!=='none') f.bufferedAttack = 'punch';
     }
     if(edges.kick){
-      if(f.atkState==='none') startAttack(f, el, side, 'kick', false);
-      else f.bufferedAttack = 'kick';
+      if(f.atkState==='none' && f.aggroState==='none') startAttack(f, el, side, 'kick', false);
+      else if(f.atkState!=='none') f.bufferedAttack = 'kick';
     }
 
     if(f.atkState==='none') return;
@@ -1709,6 +1974,147 @@
         } else {
           f.atkState = 'none';
         }
+      }
+    }
+  }
+
+  // ================= Aggro state machine (slide kick / launcher / air punch) =================
+  function startAggroMove(f, el, side, type, now){
+    f.aggroState = 'startup';
+    f.aggroType = type;
+    f.aggroPhaseStart = now;
+    f.aggroTiming = AGGRO_TIMING[type];
+    f.aggroOutcome = null;
+    f.aggroSlideStartY = f.y;
+
+    const clsMap = { slideKick:'attack-slidekick', launcher:'attack-launcher', airPunch:'attack-airpunch' };
+    const cls = clsMap[type];
+    el.classList.remove('attack-slidekick','attack-launcher','attack-airpunch');
+    void el.offsetWidth;
+    el.classList.add(cls);
+    const totalMs = f.aggroTiming.startup + f.aggroTiming.active;
+    clearTimeout(f._aggroClassTimer);
+    f._aggroClassTimer = setTimeout(()=>{ el.classList.remove(cls); }, totalMs + 60);
+
+    if(type==='airPunch'){
+      f.ikPunch = { startTime: now, durMs: totalMs, targetFn: airPunchHandTarget };
+    } else if(type==='launcher'){
+      f.ikPunch = { startTime: now, durMs: totalMs, targetFn: launcherHandTarget };
+    }
+  }
+
+  function resolveAggroMove(att, atkEl, side, def, defEl, defImpactEl, isBlue, now){
+    const type = att.aggroType;
+    const stats = AGGRO_STATS[type];
+    const dist = fighterDistance(att, def);
+
+    if(dist > stats.range){ att.aggroOutcome = 'whiff'; return; }
+    if(now < def.invincibleUntil){ att.aggroOutcome = 'whiff'; return; }
+
+    att.combo = (now - att.lastHitTime < COMBO_WINDOW) ? att.combo+1 : 1;
+    att.lastHitTime = now;
+
+    let dmg = stats.damage;
+    dmg += Math.min(att.combo-1, 5) * 2;
+    if(now < att.damageBoostUntil) dmg *= 2;
+
+    const dodged = def.blocking;
+    if(dodged){
+      att.aggroOutcome = 'whiff';
+      defImpactEl.textContent = '💨';
+      defImpactEl.classList.remove('show'); void defImpactEl.offsetWidth; defImpactEl.classList.add('show');
+      return;
+    }
+
+    const idealGap = type==='slideKick' ? 10 : type==='launcher' ? 12 : 13;
+    let tierKey;
+    if(def.shielded){
+      dmg = 0; def.shielded = false; defEl.classList.remove('shielded');
+      playSound('block');
+      tierKey = 'block';
+      att.aggroOutcome = 'block';
+      contactLock(att, def, idealGap);
+      applyPushbackOnBlock(att, def, stats.knockback*1.4);
+      pulseClass(defEl,'blockBrace',260);
+      pulseClass(atkEl,'recoilBack',260);
+    } else {
+      tierKey = type;
+      att.aggroOutcome = 'hit';
+      playSound(type==='airPunch' ? 'punch' : 'kick');
+      contactLock(att, def, idealGap);
+    }
+
+    def.health = Math.max(0, def.health - dmg);
+    att.hits++;
+
+    if(att.aggroOutcome === 'hit'){
+      const kb = stats.knockback * (att.ch.stats.knockback||1);
+      def.y += isBlue ? -kb : kb;
+      clampFighter(def);
+      const rippleTier = type==='slideKick' ? 'low' : type==='launcher' ? 'kick' : 'special';
+      (isBlue ? rippleRed : rippleBlue).applyHit({x:att.x,y:att.y},{x:def.x,y:def.y}, rippleTier, Math.min(att.combo,3));
+      if(type === 'launcher'){
+        def.launchedUntil = now + LAUNCH_HOLD_MS;
+        defEl.classList.remove('launched'); void defEl.offsetWidth; defEl.classList.add('launched');
+        setTimeout(()=>defEl.classList.remove('launched'), LAUNCH_HOLD_MS + 40);
+      }
+    }
+
+    const impactScale = Math.min(1 + (att.combo-1)*0.13, 2.4);
+    defImpactEl.style.setProperty('--impactScale', impactScale.toFixed(2));
+    defEl.classList.add('hitflash');
+    defImpactEl.textContent = type==='airPunch' ? '💫' : type==='launcher' ? '⬆️' : '🌀';
+    defImpactEl.classList.remove('show'); void defImpactEl.offsetWidth; defImpactEl.classList.add('show');
+    setTimeout(()=>defEl.classList.remove('hitflash'), 280);
+
+    if(att.combo>=2 && att.aggroOutcome==='hit') showCombo(isBlue, att.combo);
+
+    shakeArena(tierKey==='block' ? SHAKE_TIERS.block : AGGRO_SHAKE[tierKey]);
+    const pos = screenPos(def);
+    const sparkColor = tierKey==='block' ? '#7fffd4' : att.ch.color;
+    spawnSparks(pos.left, pos.top, sparkColor, tierKey==='block' ? SPARK_TIERS.block : AGGRO_SPARKS[tierKey], 1.2);
+    if(tierKey!=='block') spawnStreaks(pos.left, pos.top, sparkColor, AGGRO_STREAKS[tierKey], 1.3);
+    if(!def.jumping && tierKey!=='block') pulseClass(defEl, type==='airPunch' ? 'sq-special' : 'sq-heavy', type==='airPunch'?400:320);
+    if(att.aggroOutcome==='hit') pulseClass(atkEl,'atk-surge',260);
+    triggerHitStop(tierKey==='block' ? HITSTOP_TIERS.block : AGGRO_HITSTOP[tierKey]);
+
+    updateHealthBars();
+    if(def.health<=0 && state.roundActive) endRound('ko', isBlue ? 'blue' : 'red');
+  }
+
+  function applyAggroRootMotion(f, now){
+    if(f.aggroType !== 'slideKick' || f.aggroState==='none' || f.aggroState==='recovery') return;
+    const p = Math.min(1, aggroProgress(f, now) / 0.5);
+    const eased = 1 - Math.pow(1-p, 3);
+    const sign = f === state.blue ? -1 : 1;
+    f.y = f.aggroSlideStartY + sign * SLIDE_DISTANCE * eased;
+  }
+
+  function updateAggroState(f, el, side, opp, oppEl, oppImpactEl, isBlue, now){
+    if(f.aggroState === 'none') return;
+
+    if(f.aggroState === 'startup'){
+      if(now - f.aggroPhaseStart >= f.aggroTiming.startup){
+        f.aggroState = 'active';
+        f.aggroActiveStart = now;
+        resolveAggroMove(f, el, side, opp, oppEl, oppImpactEl, isBlue, now);
+      }
+      return;
+    }
+    if(f.aggroState === 'active'){
+      if(now - f.aggroActiveStart >= f.aggroTiming.active){
+        const bucket = f.aggroOutcome==='hit' ? 'hit' : f.aggroOutcome==='block' ? 'block' : 'whiff';
+        f.aggroState = 'recovery';
+        f.aggroRecoveryStart = now;
+        f.aggroRecoveryEnd = now + f.aggroTiming.recoveryBase[bucket];
+      }
+      return;
+    }
+    if(f.aggroState === 'recovery'){
+      if(now >= f.aggroRecoveryEnd){
+        const queued = aggroChain[side].consume();
+        f.aggroState = 'none'; f.aggroType = null;
+        if(queued) startAggroMove(f, el, side, queued, now);
       }
     }
   }
@@ -1754,8 +2160,6 @@
     att.bufferedAttack = null;
     clearTimeout(att._atkClassTimer);
     atkEl.classList.remove('attack-punch','attack-kick','attack-lowkick','aerial');
-    // Cancel any in-progress IK punch too, so a special never fights a leftover
-    // procedurally-driven arm rotation from the move it's interrupting.
     if(att.ikPunch){
       att.ikPunch = null;
       const upperEl = atkEl.querySelector('.armFrontUpper');
@@ -1764,6 +2168,10 @@
       if(lowerEl) lowerEl.style.transform='';
       atkEl.classList.remove('ikStretch');
     }
+    att.aggroState = 'none'; att.aggroType = null;
+    clearTimeout(att._aggroClassTimer);
+    atkEl.classList.remove('attack-slidekick','attack-launcher','attack-airpunch');
+    aggroChain[side].clear();
 
     att.specialCooldownUntil = now + SPECIAL_COOLDOWN;
     atkEl.classList.add('special');
@@ -1794,6 +2202,7 @@
       def.y += isBlue ? -kbS*0.4 : kbS*0.4;
       att.y += isBlue ?  kbS*1.2 : -kbS*1.2;
       clampFighter(def); clampFighter(att);
+      applyPushbackOnBlock(att, def, kind==='risingKick'?KICK_KNOCKBACK:PUNCH_KNOCKBACK);
       pulseClass(defEl,'blockBrace',300);
       pulseClass(atkEl,'recoilBack',300);
     } else if(wasBlocking){
@@ -1804,6 +2213,7 @@
       def.y += isBlue ? -kbS*0.35 : kbS*0.35;
       att.y += isBlue ?  kbS*0.9 : -kbS*0.9;
       clampFighter(def); clampFighter(att);
+      applyPushbackOnBlock(att, def, (kind==='risingKick'?KICK_KNOCKBACK:PUNCH_KNOCKBACK)*0.7);
       pulseClass(defEl,'blockBrace',260);
       pulseClass(atkEl,'recoilBack',220);
     } else {
@@ -1816,6 +2226,10 @@
     if(wasBlocking) kb *= 0.5;
     def.x += isBlue ? kb : -kb;
     clampFighter(def);
+
+    if(dmg>0){
+      (isBlue?rippleRed:rippleBlue).applyHit({x:att.x,y:att.y},{x:def.x,y:def.y}, 'special', 1.4);
+    }
 
     defImpactEl.style.setProperty('--impactScale', '1.7');
     defEl.classList.add('hitflash');
@@ -1994,6 +2408,10 @@
       keyboardJoyOverride();
       if(mode==='ai') updateAI(now);
 
+      // A fighter mid-air from a launcher hit can't block or attack.
+      if(now < state.blue.launchedUntil){ input.blueBlock=false; input.bluePunch=false; input.blueKick=false; }
+      if(now < state.red.launchedUntil){ input.redBlock=false; input.redPunch=false; input.redKick=false; }
+
       const blueEdges = {
         jump: input.blueJump && !prevInput.blueJump,
         punch: input.bluePunch && !prevInput.bluePunch,
@@ -2004,6 +2422,27 @@
         punch: input.redPunch && !prevInput.redPunch,
         kick: input.redKick && !prevInput.redKick
       };
+
+      // Dash->slideKick buffer, plus slideKick->launcher / launcher->airPunch
+      // cancel-buffer. The two-machine mutual-exclusion guard (aggroState vs
+      // atkState) lives here and inside updateAttackState.
+      [['blue', state.blue, blueEdges], ['red', state.red, redEdges]].forEach(([side, f, edges])=>{
+        const dashing = now < f.dashUntil;
+        if(dashing && edges.kick){
+          const dashProgress = 1 - Math.max(0,(f.dashUntil-now)/DASH_DURATION);
+          aggroChain[side].tryBuffer('dash', dashProgress, 'slideKick', false);
+        }
+        if(!dashing && f.aggroState==='none' && f.atkState==='none'){
+          const queued = aggroChain[side].consume();
+          if(queued==='slideKick') startAggroMove(f, side==='blue'?blueEl:redEl, side, 'slideKick', now);
+        }
+        if(f.aggroState !== 'none'){
+          const t = aggroProgress(f, now);
+          const hitConfirmed = f.aggroOutcome === 'hit';
+          if(edges.punch) aggroChain[side].tryBuffer(f.aggroType, t, 'launcher', hitConfirmed);
+          if(edges.kick)  aggroChain[side].tryBuffer(f.aggroType, t, 'airPunch', hitConfirmed);
+        }
+      });
 
       recordInputEdges('blue', now, blueEdges);
       recordInputEdges('red', now, redEdges);
@@ -2022,12 +2461,36 @@
       clampFighter(state.red);
       resolveRingGap();
 
+      // ---- Procedural lean + spine-ripple + pushback ----
+      const dtSec = Math.min((now-lastFrameTime)/1000, 1/30);
+      lastFrameTime = now;
+      [[state.blue, blueEl, true, leanBlue, rippleBlue],[state.red, redEl, false, leanRed, rippleRed]].forEach(([f,el,isBlue,lean,ripple])=>{
+        const leanTarget = lean.computeTarget(f, isBlue, now);
+        lean.step(leanTarget, dtSec);
+        ripple.step(dtSec);
+        const off = ripple.getRenderOffsets();
+        let totalDeg = lean.angle + off.chestDeg + off.headDeg*0.5;
+        totalDeg = Math.max(-40, Math.min(40, totalDeg));
+        const lw = el.querySelector('.leanWrap');
+        if(lw) lw.style.transform = `rotate(${totalDeg.toFixed(2)}deg)`;
+        const pb = pushback.step(f);
+        f.x += pb.dx; f.y += pb.dy;
+      });
+      clampFighter(state.blue); clampFighter(state.red);
+
+      // ---- Aggro root motion (slideKick's world-position slide) ----
+      applyAggroRootMotion(state.blue, now);
+      applyAggroRootMotion(state.red, now);
+      clampFighter(state.blue); clampFighter(state.red);
+
       updateAttackState(state.blue, blueEl, 'blue', state.red, redEl, 'red', impactRed, true, now, blueEdges);
       updateAttackState(state.red, redEl, 'red', state.blue, blueEl, 'blue', impactBlue, false, now, redEdges);
 
-      // IK bridge: procedurally solve+apply the punch arm for whichever fighter
-      // has an active punch this frame. Runs after the state machine so a punch
-      // that just started this tick gets its first IK frame immediately.
+      updateAggroState(state.blue, blueEl, 'blue', state.red, redEl, impactRed, true, now);
+      updateAggroState(state.red, redEl, 'red', state.blue, blueEl, impactBlue, false, now);
+
+      // IK bridge: drives whichever of punch/launcher/airPunch is currently
+      // active on either fighter (all three funnel through f.ikPunch).
       updateIKPunch(state.blue, blueEl, now);
       updateIKPunch(state.red, redEl, now);
 
